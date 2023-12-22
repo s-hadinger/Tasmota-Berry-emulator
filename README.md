@@ -126,7 +126,7 @@ Animation exported to 'output.jsonl'
 
 #### demo_pulse
 
-![pulse animated gid](/demo_gif/pulse.gif)
+<img src='/demo_gif/pulse.gif' height='20'>
 
 Berry code:
 
@@ -155,7 +155,7 @@ Animation exported to 'output.jsonl'
 
 #### demo_cylon
 
-![pulse animated gid](/demo_gif/cylon.gif)
+<img src='/demo_gif/cylon.gif' height='20'>
 
 ```berry
 import animate
