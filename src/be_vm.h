@@ -112,6 +112,7 @@ struct bvm {
     bbyte compopt; /* compilation options */
     int32_t bytesmaxsize; /* max allowed size for bytes() object, default 32kb but can be increased */
     bobshook obshook;
+    bmicrosfnct microsfnct; /* fucntion to get time as a microsecond resolution */
 #if BE_USE_PERF_COUNTERS
     uint32_t counter_ins; /* instructions counter */
     uint32_t counter_enter; /* counter for times the VM was entered */
@@ -126,6 +127,13 @@ struct bvm {
     uint32_t counter_mem_alloc; /* counter for memory allocations */
     uint32_t counter_mem_free; /* counter for memory frees */
     uint32_t counter_mem_realloc; /* counter for memory reallocations */
+
+    uint32_t micros_gc0;
+    uint32_t micros_gc1;
+    uint32_t micros_gc2;
+    uint32_t micros_gc3;
+    uint32_t micros_gc4;
+    uint32_t micros_gc5;
 
     uint32_t gc_mark_string;
     uint32_t gc_mark_class;

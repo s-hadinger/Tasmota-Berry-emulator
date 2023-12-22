@@ -5,6 +5,8 @@
 ** See Copyright Notice in the LICENSE file or at
 ** https://github.com/Skiars/berry/blob/master/LICENSE
 ********************************************************************/
+#ifndef TASMOTA       // only when compiling stand-along
+
 #include "berry.h"
 #include "be_mem.h"
 #include "be_sys.h"
@@ -404,3 +406,5 @@ int be_dirclose(bdirinfo *info)
 
 #endif /* POSIX */
 #endif /* BE_USE_OS_MODULE || BE_USE_FILE_SYSTEM */
+
+#endif // COMPILE_BERRY_LIB

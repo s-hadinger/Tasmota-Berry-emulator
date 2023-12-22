@@ -10,6 +10,11 @@
 
 #include <assert.h>
 
+#ifdef COMPILE_BERRY_LIB
+  #include "my_user_config.h"
+  #include "include/tasmota_configurations.h"
+#endif
+
 /* Macro: BE_DEBUG
  * Berry interpreter debug switch.
  * Default: 0
@@ -25,7 +30,11 @@
  * type when the value is 2.
  * Default: 2
  */
-#define BE_INTGER_TYPE                  2
+#ifdef TASMOTA
+#define BE_INTGER_TYPE                  1           // use long int = uint32_t
+#else
+#define BE_INTGER_TYPE                  0
+#endif
 
 /* Macro: BE_USE_SINGLE_FLOAT
  * Select floating point precision.
@@ -34,7 +43,7 @@
  * numbers.
  * Default: 0
  **/
-#define BE_USE_SINGLE_FLOAT             0
+#define BE_USE_SINGLE_FLOAT             1           // use `float` not `double`
 
 /* Macro: BE_BYTES_MAX_SIZE
  * Maximum size in bytes of a `bytes()` object.
@@ -57,7 +66,7 @@
  * 1: keep the source file name
  * Default: 1
  **/
-#define BE_DEBUG_SOURCE_FILE            1
+#define BE_DEBUG_SOURCE_FILE            0
 
 /* Macro: BE_DEBUG_RUNTIME_INFO
  * Set runtime error debugging information.
@@ -66,7 +75,7 @@
  * 2: the information use uint16_t type (save space).
  * Default: 1
  **/
-#define BE_DEBUG_RUNTIME_INFO           1
+#define BE_DEBUG_RUNTIME_INFO           0
 
 /* Macro: BE_DEBUG_VAR_INFO
  * Set variable debugging tracking information.
@@ -74,11 +83,11 @@
  * 1: enable variable debugging tracking information at runtime.
  * Default: 1
  **/
-#define BE_DEBUG_VAR_INFO               1
+#define BE_DEBUG_VAR_INFO               0
 
 /* Macro: BE_USE_PERF_COUNTERS
  * Use the obshook function to report low-level actions.
- * Default: 1
+ * Default: 0
  **/
 #define BE_USE_PERF_COUNTERS            1
 
@@ -95,7 +104,7 @@
  * Set the maximum total stack size.
  * Default: 20000
  **/
-#define BE_STACK_TOTAL_MAX              20000
+#define BE_STACK_TOTAL_MAX              8000
 
 /* Macro: BE_STACK_FREE_MIN
  * Set the minimum free count of the stack. The stack idles will
@@ -103,13 +112,13 @@
  * expanded if the number of free is less than BE_STACK_FREE_MIN.
  * Default: 10
  **/
-#define BE_STACK_FREE_MIN               10
+#define BE_STACK_FREE_MIN               20
 
 /* Macro: BE_STACK_START
  * Set the starting size of the stack at VM creation.
  * Default: 50
  **/
-#define BE_STACK_START                  50
+#define BE_STACK_START                  100
 
 /* Macro: BE_CONST_SEARCH_SIZE
  * Constants in function are limited to 255. However the compiler
@@ -119,7 +128,7 @@
  * Increase is you need to solidify functions.
  * Default: 50
  **/
-#define BE_CONST_SEARCH_SIZE            50
+#define BE_CONST_SEARCH_SIZE            150
 
 /* Macro: BE_STACK_FREE_MIN
  * The short string will hold the hash value when the value is
@@ -134,7 +143,11 @@
  * will not be used.
  * Default: 0
  **/
+#ifdef TASMOTA
+#define BE_USE_FILE_SYSTEM              0
+#else
 #define BE_USE_FILE_SYSTEM              1
+#endif
 
 /* Macro: BE_USE_SCRIPT_COMPILER
  * Enable compiler when BE_USE_SCRIPT_COMPILER is not 0, otherwise
@@ -162,7 +175,7 @@
  * otherwise disable the feature.
  * Default: 1
  **/
-#define BE_USE_SHARED_LIB               1
+#define BE_USE_SHARED_LIB               0
 
 /* Macro: BE_USE_OVERLOAD_HASH
  * Allows instances to overload hash methods for use in the
@@ -200,7 +213,11 @@
  * This options tries to move such memory areas to this region.
  * Default: 0
  **/
+#ifdef TASMOTA
+#define BE_USE_MEM_ALIGNED               1
+#else
 #define BE_USE_MEM_ALIGNED               0
+#endif
 
 /* Macro: BE_USE_XXX_MODULE
  * These macros control whether the related module is compiled.
@@ -208,18 +225,41 @@
  * point you can use the import statement to import the module.
  * They will not compile related modules when they are false.
  **/
-#define BE_USE_STRING_MODULE            1
-#define BE_USE_JSON_MODULE              1
-#define BE_USE_MATH_MODULE              1
-#define BE_USE_TIME_MODULE              1
-#define BE_USE_OS_MODULE                1
-#define BE_USE_GLOBAL_MODULE            1
-#define BE_USE_SYS_MODULE               1
-#define BE_USE_DEBUG_MODULE             1
-#define BE_USE_GC_MODULE                1
-#define BE_USE_SOLIDIFY_MODULE          1
-#define BE_USE_INTROSPECT_MODULE        1
-#define BE_USE_STRICT_MODULE            1
+
+#ifdef TASMOTA
+  #define BE_USE_STRING_MODULE            1
+  #define BE_USE_JSON_MODULE              1
+  #define BE_USE_MATH_MODULE              1
+  #define BE_USE_TIME_MODULE              0
+  #define BE_USE_OS_MODULE                0
+  #define BE_USE_GLOBAL_MODULE            1
+  #define BE_USE_SYS_MODULE               1
+  #define BE_USE_DEBUG_MODULE             0
+  #define BE_USE_GC_MODULE                1
+  #define BE_USE_SOLIDIFY_MODULE          0
+  #define BE_USE_INTROSPECT_MODULE        1
+  #define BE_USE_STRICT_MODULE            1
+#else
+  #define BE_USE_STRING_MODULE            1
+  #define BE_USE_JSON_MODULE              1
+  #define BE_USE_MATH_MODULE              1
+  #define BE_USE_TIME_MODULE              1
+  #define BE_USE_OS_MODULE                1
+  #define BE_USE_GLOBAL_MODULE            1
+  #define BE_USE_SYS_MODULE               1
+  #define BE_USE_DEBUG_MODULE             1
+  #define BE_USE_GC_MODULE                1
+  #define BE_USE_SOLIDIFY_MODULE          1
+  #define BE_USE_INTROSPECT_MODULE        1
+  #define BE_USE_STRICT_MODULE            1
+#endif
+
+#if defined(USE_BERRY_DEBUG) || !defined(TASMOTA)
+  #undef BE_USE_DEBUG_MODULE
+  #undef BE_USE_SOLIDIFY_MODULE
+  #define BE_USE_DEBUG_MODULE             1
+  #define BE_USE_SOLIDIFY_MODULE          1
+#endif // USE_BERRY_DEBUG
 
 /* Macro: BE_EXPLICIT_XXX
  * If these macros are defined, the corresponding function will
@@ -227,16 +267,57 @@
  * are not required.
  * The default is to use the functions in the standard library.
  **/
+#ifdef __cplusplus
+extern "C" {
+#endif
+  extern void *berry_malloc(size_t size);
+  extern void  berry_free(void *ptr);
+  extern void *berry_realloc(void *ptr, size_t size);
+  extern void *berry_malloc32(size_t size);
+#ifdef __cplusplus
+}
+#endif
+#ifdef USE_BERRY_PSRAM
+  #define BE_EXPLICIT_MALLOC              berry_malloc
+  #define BE_EXPLICIT_FREE                berry_free
+  #define BE_EXPLICIT_REALLOC             berry_realloc
+#else
+  #define BE_EXPLICIT_MALLOC              malloc
+  #define BE_EXPLICIT_FREE                free
+  #define BE_EXPLICIT_REALLOC             realloc
+#endif // USE_BERRY_PSRAM
+
 #define BE_EXPLICIT_ABORT               abort
 #define BE_EXPLICIT_EXIT                exit
-#define BE_EXPLICIT_MALLOC              malloc
-#define BE_EXPLICIT_FREE                free
-#define BE_EXPLICIT_REALLOC             realloc
+// #define BE_EXPLICIT_MALLOC              malloc
+// #define BE_EXPLICIT_FREE                free
+// #define BE_EXPLICIT_REALLOC             realloc
 
 /* Macro: be_assert
  * Berry debug assertion. Only enabled when BE_DEBUG is active.
  * Default: use the assert() function of the standard library.
  **/
 #define be_assert(expr)                 assert(expr)
+
+/* Tasmota debug specific */
+#ifdef USE_BERRY_DEBUG
+  #undef BE_DEBUG_RUNTIME_INFO
+  #define BE_DEBUG_RUNTIME_INFO 1 /* record line information in 32 bits to be places in IRAM */
+  #undef BE_DEBUG
+  #define BE_DEBUG 1
+  #undef be_assert
+  #define be_assert(expr)                                                        \
+      ((expr)                                                                \
+      ? (0)                                                \
+      : serial_debug("BRY: ASSERT '%s', %s - %i\n", #expr, __FILE__, __LINE__))
+  #ifdef USE_LVGL
+    #undef BE_STACK_START
+    #define BE_STACK_START                  200
+  #endif // USE_LVGL
+  #ifdef USE_MATTER_DEVICE
+    #undef BE_STACK_START
+    #define BE_STACK_START                  256
+  #endif // USE_MATTER_DEVICE
+#endif // USE_BERRY_DEBUG
 
 #endif

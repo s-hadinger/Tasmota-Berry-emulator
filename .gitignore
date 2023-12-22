@@ -1,3 +1,7 @@
+## OS specific ########
+.DS_Store
+.fuse_hidden*
+
 # Prerequisites
 *.d
 
@@ -30,3 +34,13 @@
 *.exe
 *.out
 *.app
+
+# Berry executable
+berry
+
+# python_env
+python_env/*
+
+# ignore any ouput
+/*.gif
+*.jsonl
