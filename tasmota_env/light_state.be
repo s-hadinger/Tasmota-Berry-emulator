@@ -63,6 +63,14 @@ class light_state
   #
   def signal_change() end     # nop
 
+  # compatibility
+  static def gamma8(v)
+    return _class.ledGamma8_8(v)
+  end
+  static def gamma10(v)
+    return _class.ledGamma10_10(v)
+  end
+
   #
   # GAMMA
   #

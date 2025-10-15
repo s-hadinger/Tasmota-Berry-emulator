@@ -17,11 +17,11 @@ class Leds
   # rmt:int (optional) = RMT hardware channel to use, leave default unless you have a good reason 
   def init(leds, gpio_phy, typ, rmt)   # rmt is optional
     self.gamma = true     # gamma is enabled by default, it should be disabled explicitly if needed
-    self.leds = int(leds)
+    self.leds = (leds != nil) ? int(leds) : 30
     self.bri = 127
 
     # fake buffer
-    self._buf = bytes(leds).resize(leds * 3)
+    self._buf = bytes(self.leds).resize(self.leds * 3)
     self._typ = typ
     # if no GPIO, abort
     # if gpio_phy == nil
@@ -99,6 +99,9 @@ class Leds
     return self.leds
     # return self.call_native(8)
   end
+  def length()
+    return self.pixel_count()
+  end
   def pixel_offset()
     return 0
   end
@@ -119,10 +122,22 @@ class Leds
   end
   def set_pixel_color(idx, col, bri)
     if (bri == nil)   bri = self.bri    end
-    self.call_native(10, idx, self.to_gamma(col, bri))
+    var rgb = self.to_gamma(col, bri)
+    var buf = self._buf
+    var r = (rgb >> 16) & 0xFF
+    var g = (rgb >>  8) & 0xFF
+    var b = (rgb      ) & 0xFF
+    buf[idx * 3 + 0] = r
+    buf[idx * 3 + 1] = g
+    buf[idx * 3 + 2] = b
+    #self.call_native(10, idx, self.to_gamma(col, bri))
   end
   def get_pixel_color(idx)
-    return self.call_native(11, idx)
+    var r = self._buf[idx * 3 + 0]
+    var g = self._buf[idx * 3 + 1]
+    var b = self._buf[idx * 3 + 2]
+    return (r << 16) | (g << 8) | b
+    # return self.call_native(11, idx)
   end
 
   # apply gamma and bri

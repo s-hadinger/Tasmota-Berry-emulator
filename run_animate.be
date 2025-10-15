@@ -10,7 +10,7 @@
   import sys
   var path = sys.path()
   path.push('./tasmota_env')
-  path.push('./tasmota')
+  path.push('./tasmota_examples')
 end)()      # last `()` calls the anonymous function immediately
 
 # import common modules that are auto-imported in Tasmota
