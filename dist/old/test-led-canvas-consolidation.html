@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LED Canvas Consolidation Test - Berry Simulator</title>
+    <style>
+        body {
+            background-color: #252525;
+            color: #d0d0d0;
+            font-family: verdana, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #4f4f4f;
+            border-radius: 5px;
+        }
+        h1, h2, h3 {
+            color: #1fa3ec;
+        }
+        canvas {
+            border: 1px solid #666;
+            display: block;
+            margin: 10px 0;
+            background-color: #1a1a1a;
+        }
+        button {
+            background-color: #1fa3ec;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8bd9;
+        }
+        button.success {
+            background-color: #4CAF50;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .status.success {
+            background-color: #1b5e20;
+            color: #a5d6a7;
+        }
+        .status.error {
+            background-color: #b71c1c;
+            color: #ef9a9a;
+        }
+        .status.info {
+            background-color: #0d47a1;
+            color: #90caf9;
+        }
+        #log {
+            background-color: #1a1a1a;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .test-result {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        .test-result.pass {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .test-result.fail {
+            background-color: #f44336;
+            color: white;
+        }
+        .strip-container {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #3a3a3a;
+            border-radius: 5px;
+        }
+        .strip-label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+        .canvas-info {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #555;
+        }
+        th {
+            background-color: #3a3a3a;
+        }
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        select, input[type="number"] {
+            padding: 8px;
+            border-radius: 3px;
+            border: 1px solid #666;
+            background-color: #3a3a3a;
+            color: #d0d0d0;
+        }
+    </style>
+</head>
+<body>
+    <h1>LED Canvas Consolidation Test Suite</h1>
+    <p>Tests for the consolidated LED Strip API (led-strip-api.js)</p>
+    <p><strong>Requirements:</strong> LED Canvas Consolidation 2.1, 2.2, 2.3, 2.4</p>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="overall-status" class="status info">Click "Run All Tests" to start</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 1: Canvas Resize on LED Count Change</h2>
+        <p>Verify canvas resizes correctly when LED count changes</p>
+        <div class="strip-container">
+            <div class="strip-label">Dynamic LED Strip</div>
+            <canvas id="canvas-resize"></canvas>
+            <div id="canvas-resize-info" class="canvas-info">Canvas: -- x --</div>
+        </div>
+        <div class="controls-row">
+            <label>LED Count: <input type="number" id="led-count-input" value="30" min="1" max="300"></label>
+            <button onclick="testResizeManual()">Apply & Test</button>
+        </div>
+        <button onclick="testCanvasResize()">Run Automated Resize Tests</button>
+        <span id="result-resize"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Pixel Size Modes</h2>
+        <p>Verify small/medium/large pixel size modes work correctly</p>
+        <div class="strip-container">
+            <div class="strip-label">Pixel Size Mode Test (30 LEDs)</div>
+            <canvas id="canvas-modes"></canvas>
+            <div id="canvas-modes-info" class="canvas-info">Mode: medium, Pixel Size: --</div>
+        </div>
+        <div class="controls-row">
+            <button onclick="testPixelSizeMode('small')">Small</button>
+            <button onclick="testPixelSizeMode('medium')">Medium</button>
+            <button onclick="testPixelSizeMode('large')">Large</button>
+        </div>
+        <button onclick="testAllPixelSizeModes()">Run All Mode Tests</button>
+        <span id="result-modes"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Rendering Display</h2>
+        <p>Verify LEDs render correctly with proper colors</p>
+        <div class="strip-container">
+            <div class="strip-label">Rendering Test Strip</div>
+            <canvas id="canvas-render"></canvas>
+            <div id="canvas-render-info" class="canvas-info">Rendered: 0 LEDs</div>
+        </div>
+        <button onclick="testRendering()">Test Rendering</button>
+        <span id="result-render"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: API Method Verification</h2>
+        <p>Verify all LED Strip API methods work correctly</p>
+        <table id="api-test-table">
+            <tr>
+                <th>Method</th>
+                <th>Expected</th>
+                <th>Actual</th>
+                <th>Result</th>
+            </tr>
+        </table>
+        <button onclick="testAPIMethods()">Test API Methods</button>
+        <span id="result-api"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 5: Reversed Orientation</h2>
+        <p>Verify reversed (right-to-left) rendering works</p>
+        <div class="strip-container">
+            <div class="strip-label">Normal (L→R)</div>
+            <canvas id="canvas-normal"></canvas>
+        </div>
+        <div class="strip-container">
+            <div class="strip-label">Reversed (R→L)</div>
+            <canvas id="canvas-reversed"></canvas>
+        </div>
+        <button onclick="testReversedOrientation()">Test Orientation</button>
+        <span id="result-orientation"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <!-- Load LED Strip API -->
+    <script src="led-strip-api.js"></script>
+    <script>
+        // Logging utilities
+        const logDiv = document.getElementById('log');
+        
+        function log(msg, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f00' : type === 'success' ? '#0f0' : '#aaa';
+            logDiv.innerHTML += `<span style="color:${color}">[${timestamp}] ${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+        
+        // Test result helpers
+        function setResult(id, passed, message) {
+            const el = document.getElementById(id);
+            el.innerHTML = `<span class="test-result ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}: ${message}</span>`;
+            return passed;
+        }
+        
+        function setOverallStatus(passed, message) {
+            const el = document.getElementById('overall-status');
+            el.className = `status ${passed ? 'success' : 'error'}`;
+            el.textContent = message;
+        }
+        
+        function updateCanvasInfo(infoId, canvas, extra = '') {
+            const el = document.getElementById(infoId);
+            if (el && canvas) {
+                el.textContent = `Canvas: ${canvas.width} x ${canvas.height}${extra ? ' | ' + extra : ''}`;
+            }
+        }
+        
+        // Helper to create rainbow hex string
+        function createRainbowHex(ledCount) {
+            let hex = '';
+            for (let i = 0; i < ledCount; i++) {
+                const hue = (i / ledCount) * 360;
+                const rgb = hslToRgb(hue, 100, 50);
+                const argb = 0xFF000000 | (rgb.r << 16) | (rgb.g << 8) | rgb.b;
+                hex += argb.toString(16).padStart(8, '0').toUpperCase();
+            }
+            return hex;
+        }
+        
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return {
+                r: Math.round(f(0) * 255),
+                g: Math.round(f(8) * 255),
+                b: Math.round(f(4) * 255)
+            };
+        }
+
+        // Test 1: Canvas Resize on LED Count Change
+        function testCanvasResize() {
+            log('=== Test 1: Canvas Resize on LED Count Change ===');
+            
+            const canvas = document.getElementById('canvas-resize');
+            const testCases = [
+                { count: 10, desc: '10 LEDs' },
+                { count: 30, desc: '30 LEDs (default)' },
+                { count: 60, desc: '60 LEDs' },
+                { count: 100, desc: '100 LEDs' },
+                { count: 300, desc: '300 LEDs (max)' }
+            ];
+            
+            let allPassed = true;
+            
+            // Initialize API for this canvas
+            window.ledStripAPI.init({
+                stripLength: 30,
+                pixelSizeMode: 'medium',
+                canvasId: 'canvas-resize',
+                maxCanvasWidth: 700
+            });
+            
+            for (const tc of testCases) {
+                // Change strip size
+                window.ledStripAPI.setStripSize(tc.count);
+                
+                // Verify strip size was updated
+                const actualSize = window.ledStripAPI.getStripSize();
+                const sizeMatch = actualSize === tc.count;
+                
+                // Verify canvas dimensions changed
+                const dims = window.ledStripAPI.getCanvasDimensions();
+                const hasValidDims = dims.width > 0 && dims.height > 0;
+                
+                // Verify canvas width is within max constraint
+                const withinMax = dims.width <= 700;
+                
+                const passed = sizeMatch && hasValidDims && withinMax;
+                allPassed = allPassed && passed;
+                
+                log(`  ${tc.desc}: size=${actualSize}, canvas=${dims.width}x${dims.height}, withinMax=${withinMax} - ${passed ? 'PASS' : 'FAIL'}`, passed ? 'success' : 'error');
+                
+                // Render rainbow to show it works
+                const hex = createRainbowHex(tc.count);
+                window.ledStripAPI.renderLEDStrip(hex);
+            }
+            
+            // Update info display
+            const dims = window.ledStripAPI.getCanvasDimensions();
+            updateCanvasInfo('canvas-resize-info', canvas, `LEDs: ${window.ledStripAPI.getStripSize()}`);
+            
+            return setResult('result-resize', allPassed, allPassed ? 'All resize tests passed' : 'Some resize tests failed');
+        }
+        
+        function testResizeManual() {
+            const count = parseInt(document.getElementById('led-count-input').value, 10);
+            if (isNaN(count) || count < 1 || count > 300) {
+                log('Invalid LED count (must be 1-300)', 'error');
+                return;
+            }
+            
+            // Initialize if needed
+            if (!window.ledStripAPI.canvas || window.ledStripAPI.canvasId !== 'canvas-resize') {
+                window.ledStripAPI.init({
+                    stripLength: count,
+                    pixelSizeMode: 'medium',
+                    canvasId: 'canvas-resize',
+                    maxCanvasWidth: 700
+                });
+            } else {
+                window.ledStripAPI.setStripSize(count);
+            }
+            
+            // Render rainbow
+            const hex = createRainbowHex(count);
+            window.ledStripAPI.renderLEDStrip(hex);
+            
+            // Update info
+            const dims = window.ledStripAPI.getCanvasDimensions();
+            const pixelSize = window.ledStripAPI.getPixelSize();
+            updateCanvasInfo('canvas-resize-info', document.getElementById('canvas-resize'), 
+                `LEDs: ${count}, Pixel: ${pixelSize}px`);
+            
+            log(`Manual resize: ${count} LEDs, canvas=${dims.width}x${dims.height}, pixel=${pixelSize}px`, 'success');
+        }
+        
+        // Test 2: Pixel Size Modes
+        function testPixelSizeMode(mode) {
+            log(`Testing pixel size mode: ${mode}`);
+            
+            // Initialize for modes canvas
+            window.ledStripAPI.init({
+                stripLength: 30,
+                pixelSizeMode: mode,
+                canvasId: 'canvas-modes',
+                maxCanvasWidth: 700
+            });
+            
+            const pixelSize = window.ledStripAPI.getPixelSize();
+            const currentMode = window.ledStripAPI.getPixelSizeMode();
+            
+            // Render rainbow
+            const hex = createRainbowHex(30);
+            window.ledStripAPI.renderLEDStrip(hex);
+            
+            // Update info
+            document.getElementById('canvas-modes-info').textContent = 
+                `Mode: ${currentMode}, Pixel Size: ${pixelSize}px`;
+            
+            log(`  Mode ${mode}: pixelSize=${pixelSize}px`, 'success');
+        }
+        
+        function testAllPixelSizeModes() {
+            log('=== Test 2: Pixel Size Modes ===');
+            
+            const modes = ['small', 'medium', 'large'];
+            const expectedRanges = {
+                small: { min: 2, max: 8 },
+                medium: { min: 4, max: 16 },
+                large: { min: 8, max: 24 }
+            };
+            
+            let allPassed = true;
+            const results = [];
+            
+            for (const mode of modes) {
+                // Initialize with mode
+                window.ledStripAPI.init({
+                    stripLength: 30,
+                    pixelSizeMode: mode,
+                    canvasId: 'canvas-modes',
+                    maxCanvasWidth: 700
+                });
+                
+                const pixelSize = window.ledStripAPI.getPixelSize();
+                const currentMode = window.ledStripAPI.getPixelSizeMode();
+                const range = expectedRanges[mode];
+                
+                // Verify mode was set
+                const modeMatch = currentMode === mode;
+                
+                // Verify pixel size is within expected range
+                const inRange = pixelSize >= range.min && pixelSize <= range.max;
+                
+                const passed = modeMatch && inRange;
+                allPassed = allPassed && passed;
+                
+                results.push({ mode, pixelSize, passed });
+                log(`  ${mode}: pixelSize=${pixelSize}px (expected ${range.min}-${range.max}) - ${passed ? 'PASS' : 'FAIL'}`, passed ? 'success' : 'error');
+            }
+            
+            // Verify modes produce different pixel sizes (small < medium < large for same LED count)
+            const smallSize = results.find(r => r.mode === 'small').pixelSize;
+            const mediumSize = results.find(r => r.mode === 'medium').pixelSize;
+            const largeSize = results.find(r => r.mode === 'large').pixelSize;
+            
+            const orderCorrect = smallSize <= mediumSize && mediumSize <= largeSize;
+            allPassed = allPassed && orderCorrect;
+            
+            log(`  Size ordering (small≤medium≤large): ${smallSize}≤${mediumSize}≤${largeSize} - ${orderCorrect ? 'PASS' : 'FAIL'}`, orderCorrect ? 'success' : 'error');
+            
+            // Leave on medium mode
+            testPixelSizeMode('medium');
+            
+            return setResult('result-modes', allPassed, allPassed ? 'All mode tests passed' : 'Some mode tests failed');
+        }
+        
+        // Test 3: Rendering Display
+        function testRendering() {
+            log('=== Test 3: Rendering Display ===');
+            
+            // Initialize for render canvas
+            window.ledStripAPI.init({
+                stripLength: 30,
+                pixelSizeMode: 'medium',
+                canvasId: 'canvas-render',
+                maxCanvasWidth: 700
+            });
+            
+            let allPassed = true;
+            
+            // Test 1: Render solid red
+            log('  Testing solid red...');
+            let hex = '';
+            for (let i = 0; i < 30; i++) {
+                hex += 'FFFF0000'; // Red
+            }
+            let result = window.ledStripAPI.renderLEDStrip(hex);
+            allPassed = allPassed && result;
+            log(`    Solid red: ${result ? 'PASS' : 'FAIL'}`, result ? 'success' : 'error');
+            
+            // Test 2: Render rainbow
+            log('  Testing rainbow...');
+            hex = createRainbowHex(30);
+            result = window.ledStripAPI.renderLEDStrip(hex);
+            allPassed = allPassed && result;
+            log(`    Rainbow: ${result ? 'PASS' : 'FAIL'}`, result ? 'success' : 'error');
+            
+            // Test 3: Render with specific colors
+            log('  Testing specific colors...');
+            const testColors = [
+                'FFFF0000', // Red
+                'FF00FF00', // Green
+                'FF0000FF', // Blue
+                'FFFFFF00', // Yellow
+                'FFFF00FF', // Magenta
+            ];
+            hex = '';
+            for (let i = 0; i < 30; i++) {
+                hex += testColors[i % testColors.length];
+            }
+            result = window.ledStripAPI.renderLEDStrip(hex);
+            allPassed = allPassed && result;
+            log(`    Specific colors: ${result ? 'PASS' : 'FAIL'}`, result ? 'success' : 'error');
+            
+            // Test 4: Verify setPixelColor works
+            log('  Testing setPixelColor...');
+            window.ledStripAPI.clear();
+            window.ledStripAPI.setPixelColor(0, 0xFFFF0000);  // Red at 0
+            window.ledStripAPI.setPixelColor(15, 0xFF00FF00); // Green at 15
+            window.ledStripAPI.setPixelColor(29, 0xFF0000FF); // Blue at 29
+            log(`    setPixelColor: PASS`, 'success');
+            
+            // Update info
+            document.getElementById('canvas-render-info').textContent = 
+                `Rendered: ${window.ledStripAPI.getStripSize()} LEDs`;
+            
+            return setResult('result-render', allPassed, allPassed ? 'All rendering tests passed' : 'Some rendering tests failed');
+        }
+        
+        // Test 4: API Method Verification
+        function testAPIMethods() {
+            log('=== Test 4: API Method Verification ===');
+            
+            const table = document.getElementById('api-test-table');
+            // Clear existing rows except header
+            while (table.rows.length > 1) {
+                table.deleteRow(1);
+            }
+            
+            // Initialize API
+            window.ledStripAPI.init({
+                stripLength: 30,
+                pixelSizeMode: 'medium',
+                canvasId: 'canvas-render',
+                maxCanvasWidth: 700
+            });
+            
+            let allPassed = true;
+            const tests = [
+                {
+                    method: 'getStripSize()',
+                    expected: 30,
+                    actual: () => window.ledStripAPI.getStripSize()
+                },
+                {
+                    method: 'setStripSize(50) then getStripSize()',
+                    expected: 50,
+                    actual: () => { window.ledStripAPI.setStripSize(50); return window.ledStripAPI.getStripSize(); }
+                },
+                {
+                    method: 'getPixelSizeMode()',
+                    expected: 'medium',
+                    actual: () => { window.ledStripAPI.setPixelSizeMode('medium'); return window.ledStripAPI.getPixelSizeMode(); }
+                },
+                {
+                    method: 'setPixelSizeMode("small") then getPixelSizeMode()',
+                    expected: 'small',
+                    actual: () => { window.ledStripAPI.setPixelSizeMode('small'); return window.ledStripAPI.getPixelSizeMode(); }
+                },
+                {
+                    method: 'getPixelSize() after setPixelSizeMode("medium")',
+                    expected: 'number > 0',
+                    actual: () => { window.ledStripAPI.setPixelSizeMode('medium'); return window.ledStripAPI.getPixelSize(); },
+                    check: (v) => typeof v === 'number' && v > 0
+                },
+                {
+                    method: 'setPixelSize(15) then getPixelSize()',
+                    expected: 15,
+                    actual: () => { window.ledStripAPI.setPixelSize(15); return window.ledStripAPI.getPixelSize(); }
+                },
+                {
+                    method: 'getCanvasDimensions()',
+                    expected: 'object with width, height > 0',
+                    actual: () => window.ledStripAPI.getCanvasDimensions(),
+                    check: (v) => v && typeof v.width === 'number' && typeof v.height === 'number' && v.width > 0 && v.height > 0
+                },
+                {
+                    method: 'renderLEDStrip(hex)',
+                    expected: true,
+                    actual: () => window.ledStripAPI.renderLEDStrip(createRainbowHex(50))
+                },
+                {
+                    method: 'clear()',
+                    expected: 'no error',
+                    actual: () => { window.ledStripAPI.clear(); return 'no error'; }
+                }
+            ];
+            
+            for (const test of tests) {
+                const actual = test.actual();
+                let passed;
+                if (test.check) {
+                    passed = test.check(actual);
+                } else {
+                    passed = actual === test.expected;
+                }
+                allPassed = allPassed && passed;
+                
+                const row = table.insertRow();
+                row.insertCell().textContent = test.method;
+                row.insertCell().textContent = String(test.expected);
+                row.insertCell().textContent = typeof actual === 'object' ? JSON.stringify(actual) : String(actual);
+                row.insertCell().innerHTML = `<span class="test-result ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</span>`;
+                
+                log(`  ${test.method}: ${passed ? 'PASS' : 'FAIL'}`, passed ? 'success' : 'error');
+            }
+            
+            // Reset to default
+            window.ledStripAPI.setStripSize(30);
+            window.ledStripAPI.setPixelSizeMode('medium');
+            
+            return setResult('result-api', allPassed, allPassed ? 'All API tests passed' : 'Some API tests failed');
+        }
+        
+        // Test 5: Reversed Orientation
+        function testReversedOrientation() {
+            log('=== Test 5: Reversed Orientation ===');
+            
+            // Create gradient hex (red to blue)
+            function createGradientHex(count) {
+                let hex = '';
+                for (let i = 0; i < count; i++) {
+                    const t = i / (count - 1);
+                    const r = Math.round(255 * (1 - t));
+                    const b = Math.round(255 * t);
+                    const argb = 0xFF000000 | (r << 16) | b;
+                    hex += argb.toString(16).padStart(8, '0').toUpperCase();
+                }
+                return hex;
+            }
+            
+            const hex = createGradientHex(30);
+            
+            // Normal orientation
+            window.ledStripAPI.init({
+                stripLength: 30,
+                pixelSizeMode: 'medium',
+                canvasId: 'canvas-normal',
+                reversed: false,
+                maxCanvasWidth: 700
+            });
+            window.ledStripAPI.renderLEDStrip(hex);
+            
+            // Reversed orientation
+            window.ledStripAPI.init({
+                stripLength: 30,
+                pixelSizeMode: 'medium',
+                canvasId: 'canvas-reversed',
+                reversed: true,
+                maxCanvasWidth: 700
+            });
+            window.ledStripAPI.renderLEDStrip(hex);
+            
+            // Test setReversed method
+            window.ledStripAPI.setReversed(false);
+            const notReversed = !window.ledStripAPI.reversed;
+            window.ledStripAPI.setReversed(true);
+            const isReversed = window.ledStripAPI.reversed;
+            
+            const passed = notReversed && isReversed;
+            log(`  setReversed(false): reversed=${!notReversed} - ${notReversed ? 'PASS' : 'FAIL'}`, notReversed ? 'success' : 'error');
+            log(`  setReversed(true): reversed=${isReversed} - ${isReversed ? 'PASS' : 'FAIL'}`, isReversed ? 'success' : 'error');
+            
+            // Re-render with reversed
+            window.ledStripAPI.renderLEDStrip(hex);
+            
+            return setResult('result-orientation', passed, passed ? 'Orientation tests passed' : 'Orientation tests failed');
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            log('========================================');
+            log('=== Running All LED Canvas Tests ===');
+            log('========================================');
+            
+            const results = [];
+            results.push(testCanvasResize());
+            results.push(testAllPixelSizeModes());
+            results.push(testRendering());
+            results.push(testAPIMethods());
+            results.push(testReversedOrientation());
+            
+            const passed = results.filter(r => r).length;
+            const total = results.length;
+            const allPassed = passed === total;
+            
+            log('========================================');
+            log(`=== Test Results: ${passed}/${total} passed ===`, allPassed ? 'success' : 'error');
+            log('========================================');
+            
+            setOverallStatus(allPassed, `${passed}/${total} tests passed`);
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            log('LED Canvas Consolidation Test Suite loaded');
+            log('LED Strip API version: ' + (window.ledStripAPI ? 'loaded' : 'NOT FOUND'));
+            
+            if (!window.ledStripAPI) {
+                log('ERROR: led-strip-api.js not loaded!', 'error');
+                setOverallStatus(false, 'LED Strip API not loaded');
+                return;
+            }
+            
+            log('Ready to run tests');
+        };
+    </script>
+</body>
+</html>

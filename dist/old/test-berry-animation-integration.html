@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Berry Animation Framework Integration Tests</title>
+    <style>
+        body { background-color: #252525; color: #d0d0d0; font-family: verdana, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; background-color: #4f4f4f; border-radius: 5px; }
+        h1, h2 { color: #1fa3ec; }
+        canvas { border: 1px solid #666; display: block; margin: 10px 0; }
+        button { background-color: #1fa3ec; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #0d8bd9; }
+        button.bgrn { background-color: #30b030; }
+        button.bred { background-color: #d03030; }
+        button:disabled { background-color: #666; cursor: not-allowed; }
+        .pass { color: #0f0; }
+        .fail { color: #f00; }
+        .warn { color: #ff0; }
+        .info { color: #1fa3ec; }
+        #log { background-color: #1a1a1a; color: #0f0; padding: 10px; font-family: monospace; height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; }
+        .fps-display { font-family: monospace; font-size: 24px; color: #0f0; margin: 10px 0; }
+        .metrics { font-family: monospace; font-size: 14px; color: #1fa3ec; }
+        .test-result { padding: 5px 10px; margin: 5px 0; border-radius: 3px; }
+        .test-result.pass { background-color: rgba(0, 255, 0, 0.1); border-left: 3px solid #0f0; }
+        .test-result.fail { background-color: rgba(255, 0, 0, 0.1); border-left: 3px solid #f00; }
+        .test-summary { font-size: 18px; font-weight: bold; padding: 10px; margin-top: 15px; border-radius: 5px; }
+        .test-summary.pass { background-color: rgba(0, 255, 0, 0.2); }
+        .test-summary.fail { background-color: rgba(255, 0, 0, 0.2); }
+    </style>
+</head>
+<body>
+    <h1>Berry Animation Framework Integration Tests</h1>
+    <p>Tests for Requirements 12.2, 12.3, 12.4, 12.5, 12.6 - Berry animation framework integration.</p>
+    
+    <div class="test-section">
+        <h2>Test Status</h2>
+        <div id="test-summary" class="test-summary">Tests not run yet</div>
+        <div id="test-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>LED Strip Visualization</h2>
+        <canvas id="led-canvas" width="600" height="20"></canvas>
+        <div class="fps-display">FPS: <span id="fps-display">--</span></div>
+        <div class="metrics">
+            <div>Millis: <span id="millis-display">--</span></div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button id="btn-run-all" class="bgrn" onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearLog()" class="bred">Clear Log</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        window.writeOutputText = function(text) { if(window.logFn) window.logFn('[Berry] ' + text.replace(/\n$/, '')); };
+        window.waitLineText = function() { return Promise.resolve(''); };
+    </script>
+    <script src="led-strip-api.js"></script>
+    <script src="virtual-fs.js"></script>
+    <script src="berry-modules.js"></script>
+    <script src="berry.js"></script>
+    <script src="berry-vm.js"></script>
+    <script src="animation-loop.js"></script>
+    
+    <script>
+        var logDiv = document.getElementById('log');
+        var testResults = [];
+        var berryReady = false;
+        var animationLoop = null;
+        
+        function log(msg, type) {
+            var ts = new Date().toLocaleTimeString();
+            var colors = { 'log': '#0f0', 'error': '#f00', 'warn': '#ff0', 'info': '#1fa3ec', 'pass': '#0f0', 'fail': '#f00' };
+            var color = colors[type] || '#0f0';
+            logDiv.innerHTML += '<span style="color:' + color + '">[' + ts + '] ' + msg + '</span>\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        window.logFn = log;
+        
+        function clearLog() { logDiv.innerHTML = ''; }
+        
+        function recordTest(name, passed, message) {
+            testResults.push({ name: name, passed: passed, message: message });
+            var resultsDiv = document.getElementById('test-results');
+            var icon = passed ? '✓' : '✗';
+            var cls = passed ? 'pass' : 'fail';
+            resultsDiv.innerHTML += '<div class="test-result ' + cls + '">' + icon + ' ' + name + ': ' + message + '</div>';
+            log(icon + ' ' + name + ': ' + message, cls);
+        }
+        
+        function updateSummary() {
+            var passed = testResults.filter(function(t) { return t.passed; }).length;
+            var failed = testResults.filter(function(t) { return !t.passed; }).length;
+            var summaryDiv = document.getElementById('test-summary');
+            if (failed === 0) {
+                summaryDiv.className = 'test-summary pass';
+                summaryDiv.textContent = 'All ' + testResults.length + ' tests passed!';
+            } else {
+                summaryDiv.className = 'test-summary fail';
+                summaryDiv.textContent = passed + '/' + testResults.length + ' tests passed, ' + failed + ' failed';
+            }
+        }
+        
+        function resetTests() {
+            testResults = [];
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('test-summary').className = 'test-summary';
+            document.getElementById('test-summary').textContent = 'Running tests...';
+        }
+        
+        // Initialize on page load
+        window.onload = async function() {
+            log('Page loaded, initializing...', 'info');
+            
+            if (window.ledStripAPI) {
+                window.ledStripAPI.init({ stripLength: 30, pixelSizeMode: 'medium', canvasId: 'led-canvas' });
+                log('LED Strip API initialized', 'info');
+            }
+            
+            if (window.berryVM) {
+                try {
+                    await window.berryVM.waitReady();
+                    berryReady = true;
+                    log('Berry VM ready', 'info');
+                    await window.berryVM.execute('import tasmota');
+                    log('Tasmota module loaded', 'info');
+                } catch (e) {
+                    log('Error initializing Berry VM: ' + e.message, 'error');
+                }
+            }
+            
+            if (typeof AnimationLoop === 'function') {
+                animationLoop = new AnimationLoop({ targetFPS: 60, useBerryFastLoop: true });
+                log('Animation Loop initialized', 'info');
+            }
+            
+            log('Ready to run tests.', 'info');
+        };
+        
+        // HSL to RGB helper
+        function hslToRgb(h, s, l) {
+            s /= 100; l /= 100;
+            var a = s * Math.min(l, 1 - l);
+            var f = function(n) { var k = (n + h / 30) % 12; return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); };
+            return { r: Math.round(f(0) * 255), g: Math.round(f(8) * 255), b: Math.round(f(4) * 255) };
+        }
+        
+        // TEST 1: Frame Buffer Display Tests
+        async function runFrameBufferTests() {
+            log('=== Frame Buffer Display Tests ===', 'info');
+            
+            // Test 1.1: LED Strip API is initialized
+            if (window.ledStripAPI && window.ledStripAPI.canvas) {
+                recordTest('LED Strip API Init', true, 'API initialized with canvas');
+            } else {
+                recordTest('LED Strip API Init', false, 'API not initialized');
+                return;
+            }
+            
+            // Test 1.2: renderLEDStrip function exists
+            if (typeof window.renderLEDStrip === 'function') {
+                recordTest('renderLEDStrip exists', true, 'Function is available');
+            } else {
+                recordTest('renderLEDStrip exists', false, 'Function not found');
+            }
+            
+            // Test 1.3: Render solid red color
+            try {
+                var hexString = '';
+                for (var i = 0; i < 30; i++) hexString += 'FF0000';
+                var result = window.renderLEDStrip(hexString);
+                recordTest('Render red LEDs', result === true, result ? 'Rendered successfully' : 'Render failed');
+            } catch (e) {
+                recordTest('Render red LEDs', false, 'Error: ' + e.message);
+            }
+            
+            // Test 1.4: Render rainbow pattern
+            try {
+                var hexString = '';
+                for (var i = 0; i < 30; i++) {
+                    var hue = (i / 30) * 360;
+                    var rgb = hslToRgb(hue, 100, 50);
+                    hexString += rgb.r.toString(16).padStart(2, '0') + rgb.g.toString(16).padStart(2, '0') + rgb.b.toString(16).padStart(2, '0');
+                }
+                var result = window.renderLEDStrip(hexString);
+                recordTest('Render rainbow', result === true, result ? 'Rainbow rendered' : 'Render failed');
+            } catch (e) {
+                recordTest('Render rainbow', false, 'Error: ' + e.message);
+            }
+            
+            // Test 1.5: Berry frame_buffer_display integration
+            if (berryReady) {
+                try {
+                    var berryCode = 'var strip = Leds(30)\nvar i = 0\nwhile i < 30\n  strip.set_pixel_color(i, 0x00FF00)\n  i += 1\nend\nstrip.show()';
+                    var result = await window.berryVM.execute(berryCode);
+                    recordTest('Berry frame_buffer_display', result.success, result.success ? 'Berry rendered to canvas' : 'Berry execution failed');
+                } catch (e) {
+                    recordTest('Berry frame_buffer_display', false, 'Error: ' + e.message);
+                }
+            } else {
+                recordTest('Berry frame_buffer_display', false, 'Berry VM not ready');
+            }
+            
+            // Test 1.6: getStripSize function
+            if (typeof window.getStripSize === 'function') {
+                var size = window.getStripSize();
+                recordTest('getStripSize', size === 30, 'Strip size: ' + size);
+            } else {
+                recordTest('getStripSize', false, 'Function not found');
+            }
+        }
+        
+        // TEST 2: tasmota.millis() Tests
+        async function runMillisTests() {
+            log('=== tasmota.millis() Tests ===', 'info');
+            
+            if (!berryReady) {
+                recordTest('Berry VM Ready', false, 'Berry VM not initialized');
+                return;
+            }
+            
+            // Test 2.1: tasmota_millis C function exists
+            try {
+                var millis = Module.ccall('tasmota_millis', 'number', [], []);
+                recordTest('tasmota_millis C function', millis >= 0, 'Returns: ' + millis);
+                document.getElementById('millis-display').textContent = millis;
+            } catch (e) {
+                recordTest('tasmota_millis C function', false, 'Error: ' + e.message);
+            }
+            
+            // Test 2.2: tasmota.millis() from Berry
+            try {
+                await window.berryVM.execute('_test_millis = tasmota.millis()');
+                var millis = await window.berryVM.getGlobal('_test_millis');
+                recordTest('tasmota.millis() Berry', millis >= 0, 'Returns: ' + millis);
+            } catch (e) {
+                recordTest('tasmota.millis() Berry', false, 'Error: ' + e.message);
+            }
+            
+            // Test 2.3: millis increments over time
+            try {
+                await window.berryVM.execute('_test_m1 = tasmota.millis()');
+                var m1 = await window.berryVM.getGlobal('_test_m1');
+                await new Promise(function(resolve) { setTimeout(resolve, 100); });
+                await window.berryVM.execute('_test_m2 = tasmota.millis()');
+                var m2 = await window.berryVM.getGlobal('_test_m2');
+                var diff = m2 - m1;
+                var passed = diff >= 50 && diff <= 200;
+                recordTest('millis increments', passed, 'Diff: ' + diff + 'ms (expected ~100ms)');
+            } catch (e) {
+                recordTest('millis increments', false, 'Error: ' + e.message);
+            }
+            
+            // Test 2.4: millis returns integer
+            try {
+                await window.berryVM.execute('_test_type = type(tasmota.millis())');
+                var typeStr = await window.berryVM.getGlobal('_test_type');
+                recordTest('millis returns int', typeStr === 'int', 'Type: ' + typeStr);
+            } catch (e) {
+                recordTest('millis returns int', false, 'Error: ' + e.message);
+            }
+            
+            // Test 2.5: millis with offset
+            try {
+                await window.berryVM.execute('_test_base = tasmota.millis()\n_test_offset = tasmota.millis(100)');
+                var base = await window.berryVM.getGlobal('_test_base');
+                var offset = await window.berryVM.getGlobal('_test_offset');
+                var diff = offset - base;
+                var passed = diff >= 99 && diff <= 105;
+                recordTest('millis with offset', passed, 'Base: ' + base + ', Offset: ' + offset + ', Diff: ' + diff);
+            } catch (e) {
+                recordTest('millis with offset', false, 'Error: ' + e.message);
+            }
+        }
+        
+        // TEST 3: Animation Loop Tests
+        async function runAnimationLoopTests() {
+            log('=== Animation Loop Tests ===', 'info');
+            
+            if (typeof AnimationLoop !== 'function') {
+                recordTest('AnimationLoop class', false, 'Class not found');
+                return;
+            }
+            recordTest('AnimationLoop class', true, 'Class is available');
+            
+            var testLoop = null;
+            try {
+                testLoop = new AnimationLoop({ targetFPS: 60 });
+                recordTest('Create AnimationLoop', true, 'Instance created');
+            } catch (e) {
+                recordTest('Create AnimationLoop', false, 'Error: ' + e.message);
+                return;
+            }
+            
+            recordTest('Initial state stopped', !testLoop.getIsRunning(), 'isRunning: ' + testLoop.getIsRunning());
+            
+            testLoop.start();
+            recordTest('Start changes state', testLoop.getIsRunning(), 'isRunning after start: ' + testLoop.getIsRunning());
+            
+            await new Promise(function(resolve) { setTimeout(resolve, 1100); });
+            var fps = testLoop.getFPS();
+            var fpsOk = fps >= 30 && fps <= 70;
+            recordTest('FPS tracking', fpsOk, 'FPS: ' + fps.toFixed(1));
+            
+            testLoop.stop();
+            recordTest('Stop changes state', !testLoop.getIsRunning(), 'isRunning after stop: ' + testLoop.getIsRunning());
+            
+            // Test _fast_loop integration
+            if (berryReady) {
+                try {
+                    await window.berryVM.execute('_fast_loop_count = 0\ndef _fast_loop()\n  global._fast_loop_count = global._fast_loop_count + 1\nend');
+                    var berryLoop = new AnimationLoop({ targetFPS: 60, useBerryFastLoop: true });
+                    berryLoop.start();
+                    await new Promise(function(resolve) { setTimeout(resolve, 200); });
+                    berryLoop.stop();
+                    var count = await window.berryVM.getGlobal('_fast_loop_count');
+                    var passed = count >= 5;
+                    recordTest('_fast_loop integration', passed, '_fast_loop called ' + count + ' times');
+                } catch (e) {
+                    recordTest('_fast_loop integration', false, 'Error: ' + e.message);
+                }
+            }
+        }
+        
+        // TEST 4: Memory/Performance Tests
+        async function runMemoryTests() {
+            log('=== Memory/Performance Tests ===', 'info');
+            
+            // Test: Repeated frame buffer updates
+            try {
+                var iterations = 1000;
+                var startTime = performance.now();
+                for (var i = 0; i < iterations; i++) {
+                    var hexString = '';
+                    for (var j = 0; j < 30; j++) {
+                        var brightness = Math.floor((Math.sin(i * 0.1 + j * 0.2) + 1) * 127);
+                        hexString += brightness.toString(16).padStart(2, '0') + brightness.toString(16).padStart(2, '0') + brightness.toString(16).padStart(2, '0');
+                    }
+                    window.renderLEDStrip(hexString);
+                }
+                var elapsed = performance.now() - startTime;
+                var avgTime = elapsed / iterations;
+                var passed = avgTime < 1;
+                recordTest('Frame buffer stress test', passed, iterations + ' iterations in ' + elapsed.toFixed(0) + 'ms (' + avgTime.toFixed(3) + 'ms avg)');
+            } catch (e) {
+                recordTest('Frame buffer stress test', false, 'Error: ' + e.message);
+            }
+            
+            // Test: Berry execution performance
+            if (berryReady) {
+                try {
+                    var iterations = 50;
+                    var startTime = performance.now();
+                    for (var i = 0; i < iterations; i++) {
+                        await window.berryVM.execute('var strip = Leds(30)\nvar j = 0\nwhile j < 30\n  strip.set_pixel_color(j, ' + (i * 1000) + ')\n  j += 1\nend\nstrip.show()');
+                    }
+                    var elapsed = performance.now() - startTime;
+                    var avgTime = elapsed / iterations;
+                    var passed = avgTime < 100;
+                    recordTest('Berry execution stress', passed, iterations + ' Berry executions in ' + elapsed.toFixed(0) + 'ms (' + avgTime.toFixed(1) + 'ms avg)');
+                } catch (e) {
+                    recordTest('Berry execution stress', false, 'Error: ' + e.message);
+                }
+            }
+        }
+        
+        // Run All Tests
+        async function runAllTests() {
+            resetTests();
+            document.getElementById('btn-run-all').disabled = true;
+            log('Starting all integration tests...', 'info');
+            
+            await runFrameBufferTests();
+            await runMillisTests();
+            await runAnimationLoopTests();
+            await runMemoryTests();
+            
+            updateSummary();
+            document.getElementById('btn-run-all').disabled = false;
+            log('All tests completed.', 'info');
+        }
+        
+        // Update millis display periodically
+        setInterval(function() {
+            if (berryReady && typeof Module !== 'undefined') {
+                try {
+                    var millis = Module.ccall('tasmota_millis', 'number', [], []);
+                    document.getElementById('millis-display').textContent = millis;
+                } catch (e) {}
+            }
+        }, 100);
+    </script>
+</body>
+</html>

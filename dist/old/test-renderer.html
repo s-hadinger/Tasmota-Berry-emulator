@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LED Strip Renderer Test</title>
+    <style>
+        body {
+            background-color: #252525;
+            color: #d0d0d0;
+            font-family: verdana, sans-serif;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #4f4f4f;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #1fa3ec;
+        }
+        canvas {
+            border: 1px solid #666;
+            display: block;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #1fa3ec;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8bd9;
+        }
+        .status {
+            color: #0f0;
+            margin: 10px 0;
+        }
+        .error {
+            color: #f00;
+        }
+        #log {
+            background-color: #1a1a1a;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 150px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>LED Strip Renderer Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Basic Initialization</h2>
+        <canvas id="test-canvas-1"></canvas>
+        <button onclick="test1()">Run Test 1</button>
+        <div id="test1-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Render from Hex String (ARGB)</h2>
+        <canvas id="test-canvas-2"></canvas>
+        <button onclick="test2()">Run Test 2</button>
+        <div id="test2-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Different Strip Lengths</h2>
+        <canvas id="test-canvas-3"></canvas>
+        <button onclick="test3_30()">30 LEDs</button>
+        <button onclick="test3_60()">60 LEDs</button>
+        <button onclick="test3_300()">300 LEDs</button>
+        <div id="test3-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Vertical Orientation</h2>
+        <canvas id="test-canvas-4"></canvas>
+        <button onclick="test4()">Run Test 4</button>
+        <div id="test4-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 5: Global renderLEDStrip Function</h2>
+        <canvas id="test-canvas-5"></canvas>
+        <button onclick="test5()">Run Test 5</button>
+        <div id="test5-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="renderer.js"></script>
+    <script>
+        // Override console.log to show in page
+        const logDiv = document.getElementById('log');
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logDiv.innerHTML += args.join(' ') + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        };
+        
+        function setStatus(id, message, isError = false) {
+            const el = document.getElementById(id);
+            el.textContent = message;
+            el.className = isError ? 'status error' : 'status';
+        }
+        
+        // Test 1: Basic initialization
+        function test1() {
+            try {
+                const renderer = new LEDStripRenderer('test-canvas-1', 10, 1);
+                console.log('Test 1: Created renderer with 10 LEDs');
+                console.log('  Canvas size: ' + renderer.canvas.width + 'x' + renderer.canvas.height);
+                console.log('  LED count: ' + renderer.getLEDCount());
+                setStatus('test1-status', 'PASSED: Renderer initialized successfully');
+            } catch (e) {
+                console.log('Test 1 FAILED: ' + e.message);
+                setStatus('test1-status', 'FAILED: ' + e.message, true);
+            }
+        }
+        
+        // Test 2: Render from hex string
+        function test2() {
+            try {
+                const renderer = new LEDStripRenderer('test-canvas-2', 8, 1);
+                
+                // Create hex string with ARGB colors:
+                // Red, Green, Blue, Yellow, Cyan, Magenta, White, Black
+                const colors = [
+                    'FFFF0000',  // Red (A=FF, R=FF, G=00, B=00)
+                    'FF00FF00',  // Green
+                    'FF0000FF',  // Blue
+                    'FFFFFF00',  // Yellow
+                    'FF00FFFF',  // Cyan
+                    'FFFF00FF',  // Magenta
+                    'FFFFFFFF',  // White
+                    'FF000000'   // Black
+                ];
+                const hexString = colors.join('');
+                
+                console.log('Test 2: Rendering 8 LEDs with colors');
+                console.log('  Hex string length: ' + hexString.length + ' chars');
+                
+                renderer.renderFromHex(hexString);
+                
+                setStatus('test2-status', 'PASSED: Rendered 8 colored LEDs (R,G,B,Y,C,M,W,K)');
+            } catch (e) {
+                console.log('Test 2 FAILED: ' + e.message);
+                setStatus('test2-status', 'FAILED: ' + e.message, true);
+            }
+        }
+        
+        // Test 3: Different strip lengths
+        function test3_30() { test3(30); }
+        function test3_60() { test3(60); }
+        function test3_300() { test3(300); }
+        
+        function test3(numLeds) {
+            try {
+                const renderer = new LEDStripRenderer('test-canvas-3', numLeds, 1, {
+                    pixelSize: numLeds > 100 ? 3 : 8,
+                    ledSpacing: numLeds > 100 ? 1 : 2
+                });
+                
+                // Create rainbow gradient
+                let hexString = '';
+                for (let i = 0; i < numLeds; i++) {
+                    const hue = (i / numLeds) * 360;
+                    const rgb = hslToRgb(hue, 100, 50);
+                    hexString += 'FF' + rgb.r.toString(16).padStart(2, '0') +
+                                       rgb.g.toString(16).padStart(2, '0') +
+                                       rgb.b.toString(16).padStart(2, '0');
+                }
+                
+                renderer.renderFromHex(hexString);
+                
+                console.log('Test 3: Rendered ' + numLeds + ' LEDs with rainbow');
+                setStatus('test3-status', 'PASSED: Rendered ' + numLeds + ' LEDs');
+            } catch (e) {
+                console.log('Test 3 FAILED: ' + e.message);
+                setStatus('test3-status', 'FAILED: ' + e.message, true);
+            }
+        }
+        
+        // Test 4: Vertical orientation
+        function test4() {
+            try {
+                const renderer = new LEDStripRenderer('test-canvas-4', 10, 1, {
+                    orientation: 'vertical'
+                });
+                
+                // Create gradient from red to blue
+                let hexString = '';
+                for (let i = 0; i < 10; i++) {
+                    const r = Math.floor(255 * (1 - i/9));
+                    const b = Math.floor(255 * (i/9));
+                    hexString += 'FF' + r.toString(16).padStart(2, '0') +
+                                 '00' + b.toString(16).padStart(2, '0');
+                }
+                
+                renderer.renderFromHex(hexString);
+                
+                console.log('Test 4: Rendered vertical strip');
+                setStatus('test4-status', 'PASSED: Vertical orientation working');
+            } catch (e) {
+                console.log('Test 4 FAILED: ' + e.message);
+                setStatus('test4-status', 'FAILED: ' + e.message, true);
+            }
+        }
+        
+        // Test 5: Global function
+        function test5() {
+            try {
+                // Initialize global renderer
+                initLEDRenderer('test-canvas-5', 16, 1);
+                
+                // Create alternating red/green pattern
+                let hexString = '';
+                for (let i = 0; i < 16; i++) {
+                    hexString += (i % 2 === 0) ? 'FFFF0000' : 'FF00FF00';
+                }
+                
+                // Call global function (as Berry would)
+                renderLEDStrip(hexString);
+                
+                console.log('Test 5: Global renderLEDStrip function works');
+                setStatus('test5-status', 'PASSED: Global function working');
+            } catch (e) {
+                console.log('Test 5 FAILED: ' + e.message);
+                setStatus('test5-status', 'FAILED: ' + e.message, true);
+            }
+        }
+        
+        // Helper: HSL to RGB conversion
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return {
+                r: Math.round(f(0) * 255),
+                g: Math.round(f(8) * 255),
+                b: Math.round(f(4) * 255)
+            };
+        }
+        
+        // Run all tests on load
+        window.onload = function() {
+            console.log('LED Strip Renderer Test Page Loaded');
+            console.log('Click buttons to run individual tests');
+        };
+    </script>
+</body>
+</html>

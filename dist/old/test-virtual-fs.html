@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Filesystem Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 { color: #4CAF50; }
+        h2 { color: #2196F3; margin-top: 30px; }
+        .test-section {
+            background: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .pass { background: #1b5e20; color: #a5d6a7; }
+        .fail { background: #b71c1c; color: #ef9a9a; }
+        .info { background: #0d47a1; color: #90caf9; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #45a049; }
+        button.secondary { background: #2196F3; }
+        button.secondary:hover { background: #1976D2; }
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        #output {
+            min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗂️ Virtual Filesystem Test</h1>
+    <p>Testing the VirtualFS class for Berry module imports in the browser.</p>
+    
+    <div class="test-section">
+        <h2>Unit Tests</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button class="secondary" onclick="clearOutput()">Clear Output</button>
+        <div id="output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Integration Test with Berry</h2>
+        <p>This test requires the Berry WASM module to be loaded.</p>
+        <button onclick="runBerryIntegrationTest()">Test Berry Import</button>
+        <div id="berry-output"></div>
+    </div>
+    
+    <script src="virtual-fs.js"></script>
+    <script>
+        // Required by Berry's print() function
+        window.writeOutputText = function(text) {
+            console.log('[Berry]', text);
+        };
+        // Required by Berry's input() function
+        window.waitLineText = function() {
+            return Promise.resolve('');
+        };
+    </script>
+    <script>
+        const output = document.getElementById('output');
+        const berryOutput = document.getElementById('berry-output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            output.appendChild(div);
+        }
+        
+        function assert(condition, message) {
+            if (condition) {
+                log(`✓ PASS: ${message}`, 'pass');
+                return true;
+            } else {
+                log(`✗ FAIL: ${message}`, 'fail');
+                return false;
+            }
+        }
+        
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+        
+        function runAllTests() {
+            clearOutput();
+            log('Starting VirtualFS unit tests...', 'info');
+            
+            let passed = 0;
+            let failed = 0;
+            
+            // Test 1: VirtualFS exists
+            if (assert(typeof window.virtualFS !== 'undefined', 'window.virtualFS exists')) passed++; else failed++;
+            if (assert(typeof window.VirtualFS === 'function', 'VirtualFS class is exported')) passed++; else failed++;
+            
+            // Test 2: Register and get file
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('test.be', 'print("hello")');
+            if (assert(window.virtualFS.getFile('test.be') === 'print("hello")', 'registerFile and getFile work')) passed++; else failed++;
+            
+            // Test 3: Path normalization - leading slash
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('/animation.be', 'class Animation end');
+            if (assert(window.virtualFS.getFile('animation.be') === 'class Animation end', 'Leading slash is normalized')) passed++; else failed++;
+            if (assert(window.virtualFS.getFile('/animation.be') === 'class Animation end', 'Can retrieve with leading slash')) passed++; else failed++;
+            
+            // Test 4: Path normalization - ./
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('./module.be', 'var x = 1');
+            if (assert(window.virtualFS.getFile('module.be') === 'var x = 1', './ prefix is normalized')) passed++; else failed++;
+            
+            // Test 5: Auto .be extension
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('animation.be', 'class Animation end');
+            if (assert(window.virtualFS.getFile('animation') === 'class Animation end', 'Auto-adds .be extension')) passed++; else failed++;
+            
+            // Test 6: File not found returns null
+            window.virtualFS.clear();
+            if (assert(window.virtualFS.getFile('nonexistent.be') === null, 'Returns null for missing file')) passed++; else failed++;
+            
+            // Test 7: hasFile method
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('exists.be', 'content');
+            if (assert(window.virtualFS.hasFile('exists.be') === true, 'hasFile returns true for existing file')) passed++; else failed++;
+            if (assert(window.virtualFS.hasFile('missing.be') === false, 'hasFile returns false for missing file')) passed++; else failed++;
+            
+            // Test 8: removeFile method
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('toremove.be', 'content');
+            window.virtualFS.removeFile('toremove.be');
+            if (assert(window.virtualFS.getFile('toremove.be') === null, 'removeFile removes the file')) passed++; else failed++;
+            
+            // Test 9: listFiles method
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('a.be', '1');
+            window.virtualFS.registerFile('b.be', '2');
+            const files = window.virtualFS.listFiles();
+            if (assert(files.length === 2, 'listFiles returns correct count')) passed++; else failed++;
+            if (assert(files.includes('a.be') && files.includes('b.be'), 'listFiles contains registered files')) passed++; else failed++;
+            
+            // Test 10: size property
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('x.be', '1');
+            window.virtualFS.registerFile('y.be', '2');
+            window.virtualFS.registerFile('z.be', '3');
+            if (assert(window.virtualFS.size === 3, 'size property returns correct count')) passed++; else failed++;
+            
+            // Test 11: registerFiles (batch)
+            window.virtualFS.clear();
+            window.virtualFS.registerFiles({
+                'file1.be': 'content1',
+                'file2.be': 'content2',
+                'file3.be': 'content3'
+            });
+            if (assert(window.virtualFS.size === 3, 'registerFiles registers multiple files')) passed++; else failed++;
+            if (assert(window.virtualFS.getFile('file2.be') === 'content2', 'registerFiles content is correct')) passed++; else failed++;
+            
+            // Test 12: clear method
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('test.be', 'content');
+            window.virtualFS.clear();
+            if (assert(window.virtualFS.size === 0, 'clear removes all files')) passed++; else failed++;
+            
+            // Test 13: Path with subdirectory
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('path/to/module.be', 'subdir content');
+            if (assert(window.virtualFS.getFile('path/to/module.be') === 'subdir content', 'Subdirectory paths work')) passed++; else failed++;
+            if (assert(window.virtualFS.getFile('/path/to/module.be') === 'subdir content', 'Subdirectory with leading slash works')) passed++; else failed++;
+            
+            // Test 14: Empty path handling
+            if (assert(window.virtualFS.getFile('') === null, 'Empty path returns null')) passed++; else failed++;
+            if (assert(window.virtualFS.getFile(null) === null, 'Null path returns null')) passed++; else failed++;
+            
+            // Summary
+            log('', 'info');
+            log(`Tests complete: ${passed} passed, ${failed} failed`, passed > 0 && failed === 0 ? 'pass' : 'fail');
+            
+            // Clean up
+            window.virtualFS.clear();
+        }
+        
+        async function runBerryIntegrationTest() {
+            berryOutput.innerHTML = '<div class="test-result info">Loading Berry WASM module...</div>';
+            
+            // Check if Berry module is available
+            if (typeof Module === 'undefined') {
+                // Try to load it
+                const script = document.createElement('script');
+                script.src = 'berry.js';
+                script.onload = () => {
+                    setTimeout(runBerryImportTest, 1000);
+                };
+                script.onerror = () => {
+                    berryOutput.innerHTML = '<div class="test-result fail">Failed to load berry.js</div>';
+                };
+                document.head.appendChild(script);
+            } else {
+                runBerryImportTest();
+            }
+        }
+        
+        function runBerryImportTest() {
+            berryOutput.innerHTML = '';
+            
+            const logBerry = (msg, type = 'info') => {
+                const div = document.createElement('div');
+                div.className = `test-result ${type}`;
+                div.textContent = msg;
+                berryOutput.appendChild(div);
+            };
+            
+            // Register a test module - simple Berry file that defines a global
+            window.virtualFS.clear();
+            window.virtualFS.registerFile('testmodule.be', `
+# Test module for virtual filesystem
+# This file is loaded via import testmodule
+test_value = 42
+`);
+            
+            logBerry('Registered testmodule.be in virtual filesystem', 'info');
+            logBerry('Content: test_value = 42', 'info');
+            
+            // Try to import it via Berry
+            if (typeof Module !== 'undefined' && Module.ccall) {
+                try {
+                    // First, just test that we can import the module
+                    const result = Module.ccall('berry_execute', 'number', ['string'], [
+                        'import testmodule\nprint("Import successful!")'
+                    ]);
+                    
+                    if (result === 0) {
+                        logBerry('✓ Berry import testmodule succeeded!', 'pass');
+                    } else {
+                        logBerry('✗ Berry import failed with code: ' + result, 'fail');
+                    }
+                } catch (e) {
+                    logBerry('✗ Error: ' + e.message, 'fail');
+                }
+            } else {
+                logBerry('Berry WASM module not ready. Make sure berry.js is loaded.', 'fail');
+            }
+        }
+        
+        // Run tests automatically on load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 100);
+        });
+    </script>
+</body>
+</html>

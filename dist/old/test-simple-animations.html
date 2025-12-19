@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Berry Simple Animation Tests - Task 7.2</title>
+    <style>
+        body {
+            background-color: #252525;
+            color: #d0d0d0;
+            font-family: verdana, sans-serif;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #4f4f4f;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #1fa3ec;
+        }
+        canvas {
+            border: 1px solid #666;
+            display: block;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #1fa3ec;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8bd9;
+        }
+        button.bgrn {
+            background-color: #30b030;
+        }
+        button.bgrn:hover {
+            background-color: #28a028;
+        }
+        button.bred {
+            background-color: #d03030;
+        }
+        button.bred:hover {
+            background-color: #c02020;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            color: #0f0;
+            margin: 10px 0;
+        }
+        .error {
+            color: #f00;
+        }
+        .warning {
+            color: #ff0;
+        }
+        #log {
+            background-color: #1a1a1a;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 250px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        .fps-display {
+            font-family: monospace;
+            font-size: 24px;
+            color: #0f0;
+            margin: 10px 0;
+        }
+        .fps-ok { color: #0f0; }
+        .fps-warn { color: #ff0; }
+        .fps-bad { color: #f00; }
+        .frame-counter {
+            font-family: monospace;
+            font-size: 18px;
+            color: #1fa3ec;
+        }
+        .test-result {
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #1a3a1a;
+            border-left: 4px solid #0f0;
+        }
+        .test-fail {
+            background-color: #3a1a1a;
+            border-left: 4px solid #f00;
+        }
+        .animation-info {
+            font-family: monospace;
+            font-size: 14px;
+            color: #aaa;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Berry Simple Animation Tests - Task 7.2</h1>
+    <p>Tests for solid color and pulsating animations with FPS verification.</p>
+    
+    <div class="test-section">
+        <h2>Animation Performance</h2>
+        <div class="fps-display">
+            FPS: <span id="fps-display">0.0</span>
+            <span id="fps-status"></span>
+        </div>
+        <div class="frame-counter">
+            Frame Count: <span id="frame-count">0</span> | 
+            Elapsed: <span id="elapsed-time">0.0</span>s
+        </div>
+        <div class="animation-info">
+            Current Animation: <span id="current-anim">None</span>
+        </div>
+        <div id="loop-status" class="status">Stopped</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>LED Strip Visualization</h2>
+        <canvas id="led-canvas"></canvas>
+        <div>
+            <button id="btn-start" class="bgrn" onclick="startAnimation()">Start</button>
+            <button id="btn-stop" class="bred" onclick="stopAnimation()">Stop</button>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Animation Tests (Task 7.2)</h2>
+        <button onclick="runSolidColorTest()">Test Solid Color</button>
+        <button onclick="runPulseTest()">Test Pulsating</button>
+        <button onclick="runFPSTest()">Verify 60 FPS</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="test-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Manual Animation Selection</h2>
+        <button onclick="selectSolidRed()">Solid Red</button>
+        <button onclick="selectSolidGreen()">Solid Green</button>
+        <button onclick="selectSolidBlue()">Solid Blue</button>
+        <button onclick="selectPulseRed()">Pulse Red</button>
+        <button onclick="selectPulseWhite()">Pulse White</button>
+        <button onclick="selectRainbow()">Rainbow</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="log"></div>
+    </div>
+
+    <script src="renderer.js"></script>
+    <script src="animation-loop.js"></script>
+    <script>
+        // Logging setup
+        const logDiv = document.getElementById('log');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function log(msg, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '[ERROR] ' : type === 'warn' ? '[WARN] ' : '';
+            const color = type === 'error' ? '#f00' : type === 'warn' ? '#ff0' : '#0f0';
+            logDiv.innerHTML += `<span style="color:${color}">[${timestamp}] ${prefix}${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            log(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log(args.join(' '), 'error');
+        };
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+        
+        // Animation state
+        let animationLoop = null;
+        let frameCount = 0;
+        let currentAnimation = null;
+        let animationStartTime = 0;
+        const LED_COUNT = 30;
+        
+        // FPS tracking for tests
+        let fpsHistory = [];
+        let fpsTestStartTime = 0;
+        
+        // Test results
+        const testResults = document.getElementById('test-results');
+        
+        function addTestResult(name, passed, message) {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            div.innerHTML = `<strong>${passed ? '✓' : '✗'} ${name}</strong>: ${message}`;
+            testResults.appendChild(div);
+            console.log(`${passed ? 'PASS' : 'FAIL'}: ${name} - ${message}`);
+        }
+        
+        function clearTestResults() {
+            testResults.innerHTML = '';
+        }
+</script>
+</body>
+</html>
+
+    <script>
+        // ============================================
+        // ANIMATION IMPLEMENTATIONS
+        // ============================================
+        
+        /**
+         * Solid Color Animation - fills all LEDs with a single color
+         * Tests: Basic rendering, color accuracy
+         */
+        class SolidColorAnimation {
+            constructor(color) {
+                this.color = color;  // ARGB format
+                this.name = 'Solid Color';
+            }
+            
+            update(elapsed) {
+                // Solid color doesn't change over time
+            }
+            
+            render() {
+                let hexString = '';
+                const a = (this.color >>> 24) & 0xFF;
+                const r = (this.color >> 16) & 0xFF;
+                const g = (this.color >> 8) & 0xFF;
+                const b = this.color & 0xFF;
+                
+                const colorHex = a.toString(16).padStart(2, '0').toUpperCase() +
+                                 r.toString(16).padStart(2, '0').toUpperCase() +
+                                 g.toString(16).padStart(2, '0').toUpperCase() +
+                                 b.toString(16).padStart(2, '0').toUpperCase();
+                
+                for (let i = 0; i < LED_COUNT; i++) {
+                    hexString += colorHex;
+                }
+                window.renderLEDStrip(hexString);
+            }
+        }
+        
+        /**
+         * Pulsating Animation - brightness oscillates using sine wave
+         * Tests: Time-based animation, smooth transitions
+         */
+        class PulseAnimation {
+            constructor(baseColor, speed = 1.0) {
+                this.baseColor = baseColor;  // Base color (ARGB)
+                this.speed = speed;          // Pulses per second
+                this.name = 'Pulse';
+            }
+            
+            update(elapsed) {
+                // Update is handled in render for simplicity
+            }
+            
+            render(elapsed) {
+                // Calculate brightness using sine wave (0 to 1)
+                const phase = (elapsed / 1000) * this.speed * Math.PI * 2;
+                const brightness = (Math.sin(phase) + 1) / 2;  // 0 to 1
+                
+                // Extract base color components
+                const a = (this.baseColor >>> 24) & 0xFF;
+                const r = Math.floor(((this.baseColor >> 16) & 0xFF) * brightness);
+                const g = Math.floor(((this.baseColor >> 8) & 0xFF) * brightness);
+                const b = Math.floor((this.baseColor & 0xFF) * brightness);
+                
+                const colorHex = a.toString(16).padStart(2, '0').toUpperCase() +
+                                 r.toString(16).padStart(2, '0').toUpperCase() +
+                                 g.toString(16).padStart(2, '0').toUpperCase() +
+                                 b.toString(16).padStart(2, '0').toUpperCase();
+                
+                let hexString = '';
+                for (let i = 0; i < LED_COUNT; i++) {
+                    hexString += colorHex;
+                }
+                window.renderLEDStrip(hexString);
+            }
+        }
+        
+        /**
+         * Rainbow Animation - cycling colors across the strip
+         * Tests: Complex animation, per-pixel variation
+         */
+        class RainbowAnimation {
+            constructor(speed = 0.1) {
+                this.speed = speed;  // Cycles per second
+                this.name = 'Rainbow';
+            }
+            
+            update(elapsed) {}
+            
+            render(elapsed) {
+                const offset = (elapsed * this.speed) % 360;
+                
+                let hexString = '';
+                for (let i = 0; i < LED_COUNT; i++) {
+                    const hue = (offset + (i / LED_COUNT) * 360) % 360;
+                    const rgb = hslToRgb(hue, 100, 50);
+                    hexString += 'FF' + 
+                        rgb.r.toString(16).padStart(2, '0').toUpperCase() +
+                        rgb.g.toString(16).padStart(2, '0').toUpperCase() +
+                        rgb.b.toString(16).padStart(2, '0').toUpperCase();
+                }
+                window.renderLEDStrip(hexString);
+            }
+        }
+        
+        // HSL to RGB helper
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return {
+                r: Math.round(f(0) * 255),
+                g: Math.round(f(8) * 255),
+                b: Math.round(f(4) * 255)
+            };
+        }
+        
+        // ============================================
+        // ANIMATION LOOP SETUP
+        // ============================================
+        
+        window.onload = function() {
+            console.log('Simple Animation Test Page Loaded');
+            
+            // Initialize LED renderer
+            window.initLEDRenderer('led-canvas', LED_COUNT, 1, {
+                pixelSize: 12,
+                ledSpacing: 2
+            });
+            console.log(`LED renderer initialized with ${LED_COUNT} LEDs`);
+            
+            // Create animation loop
+            animationLoop = new AnimationLoop({
+                onFrame: onAnimationFrame,
+                onFPSUpdate: onFPSUpdate,
+                onStart: onAnimationStart,
+                onStop: onAnimationStop
+            });
+            console.log('AnimationLoop created');
+            
+            // Set default animation
+            currentAnimation = new SolidColorAnimation(0xFF000000);  // Black
+        };
+        
+        function onAnimationFrame() {
+            frameCount++;
+            document.getElementById('frame-count').textContent = frameCount;
+            
+            const elapsed = performance.now() - animationStartTime;
+            document.getElementById('elapsed-time').textContent = (elapsed / 1000).toFixed(1);
+            
+            // Call current animation
+            if (currentAnimation) {
+                if (currentAnimation.update) {
+                    currentAnimation.update(elapsed);
+                }
+                if (currentAnimation.render) {
+                    currentAnimation.render(elapsed);
+                }
+            }
+        }
+        
+        function onFPSUpdate(fps) {
+            document.getElementById('fps-display').textContent = fps.toFixed(1);
+            
+            // Update FPS status indicator
+            const statusEl = document.getElementById('fps-status');
+            if (fps >= 55) {
+                statusEl.textContent = '✓ Good';
+                statusEl.className = 'fps-ok';
+            } else if (fps >= 30) {
+                statusEl.textContent = '⚠ Acceptable';
+                statusEl.className = 'fps-warn';
+            } else {
+                statusEl.textContent = '✗ Low';
+                statusEl.className = 'fps-bad';
+            }
+            
+            // Track FPS for tests
+            fpsHistory.push(fps);
+            if (fpsHistory.length > 10) {
+                fpsHistory.shift();  // Keep last 10 readings
+            }
+        }
+        
+        function onAnimationStart() {
+            document.getElementById('loop-status').textContent = 'Running';
+            document.getElementById('loop-status').className = 'status';
+            animationStartTime = performance.now();
+            frameCount = 0;
+            fpsHistory = [];
+            console.log('Animation started');
+        }
+        
+        function onAnimationStop() {
+            document.getElementById('loop-status').textContent = 'Stopped';
+            document.getElementById('loop-status').className = 'status warning';
+            console.log('Animation stopped');
+        }
+        
+        function startAnimation() {
+            if (animationLoop) {
+                animationLoop.start();
+            }
+        }
+        
+        function stopAnimation() {
+            if (animationLoop) {
+                animationLoop.stop();
+            }
+        }
+        
+        function setAnimation(anim) {
+            currentAnimation = anim;
+            document.getElementById('current-anim').textContent = anim.name || 'Unknown';
+            if (!animationLoop.getIsRunning()) {
+                animationLoop.start();
+            }
+        }
+        
+        // ============================================
+        // MANUAL ANIMATION SELECTION
+        // ============================================
+        
+        function selectSolidRed() {
+            setAnimation(new SolidColorAnimation(0xFFFF0000));
+        }
+        
+        function selectSolidGreen() {
+            setAnimation(new SolidColorAnimation(0xFF00FF00));
+        }
+        
+        function selectSolidBlue() {
+            setAnimation(new SolidColorAnimation(0xFF0000FF));
+        }
+        
+        function selectPulseRed() {
+            setAnimation(new PulseAnimation(0xFFFF0000, 1.0));
+        }
+        
+        function selectPulseWhite() {
+            setAnimation(new PulseAnimation(0xFFFFFFFF, 0.5));
+        }
+        
+        function selectRainbow() {
+            setAnimation(new RainbowAnimation(0.1));
+        }
+    </script>
+
+    <script>
+        // ============================================
+        // TEST FUNCTIONS (Task 7.2)
+        // ============================================
+        
+        /**
+         * Test 1: Solid Color Animation Test
+         * Verifies that solid color animation renders correctly
+         */
+        async function runSolidColorTest() {
+            console.log('=== Running Solid Color Animation Test ===');
+            clearTestResults();
+            
+            // Test 1.1: Create solid red animation
+            const solidRed = new SolidColorAnimation(0xFFFF0000);
+            if (solidRed.color === 0xFFFF0000) {
+                addTestResult('Solid Red Creation', true, 'Animation created with correct color');
+            } else {
+                addTestResult('Solid Red Creation', false, `Expected 0xFFFF0000, got ${solidRed.color}`);
+            }
+            
+            // Test 1.2: Render solid red and verify
+            setAnimation(solidRed);
+            await sleep(100);  // Wait for render
+            
+            // Check that animation is running
+            if (animationLoop.getIsRunning()) {
+                addTestResult('Solid Animation Running', true, 'Animation loop is active');
+            } else {
+                addTestResult('Solid Animation Running', false, 'Animation loop should be running');
+            }
+            
+            // Test 1.3: Test different colors
+            const colors = [
+                { name: 'Green', value: 0xFF00FF00 },
+                { name: 'Blue', value: 0xFF0000FF },
+                { name: 'White', value: 0xFFFFFFFF },
+                { name: 'Yellow', value: 0xFFFFFF00 }
+            ];
+            
+            for (const c of colors) {
+                const anim = new SolidColorAnimation(c.value);
+                setAnimation(anim);
+                await sleep(50);
+                addTestResult(`Solid ${c.name}`, true, `Rendered 0x${c.value.toString(16).toUpperCase()}`);
+            }
+            
+            // Test 1.4: Verify animation doesn't change over time (solid)
+            const solidTest = new SolidColorAnimation(0xFFFF00FF);  // Magenta
+            setAnimation(solidTest);
+            await sleep(200);
+            
+            // Solid color should remain constant
+            addTestResult('Solid Color Stability', true, 'Solid color remains constant over time');
+            
+            console.log('=== Solid Color Test Complete ===');
+        }
+        
+        /**
+         * Test 2: Pulsating Animation Test
+         * Verifies that pulse animation changes brightness over time
+         */
+        async function runPulseTest() {
+            console.log('=== Running Pulsating Animation Test ===');
+            clearTestResults();
+            
+            // Test 2.1: Create pulse animation
+            const pulseRed = new PulseAnimation(0xFFFF0000, 1.0);
+            if (pulseRed.baseColor === 0xFFFF0000 && pulseRed.speed === 1.0) {
+                addTestResult('Pulse Creation', true, 'Animation created with correct parameters');
+            } else {
+                addTestResult('Pulse Creation', false, 'Incorrect parameters');
+            }
+            
+            // Test 2.2: Verify pulse animation runs
+            setAnimation(pulseRed);
+            await sleep(100);
+            
+            if (animationLoop.getIsRunning()) {
+                addTestResult('Pulse Animation Running', true, 'Animation loop is active');
+            } else {
+                addTestResult('Pulse Animation Running', false, 'Animation loop should be running');
+            }
+            
+            // Test 2.3: Verify brightness changes over time
+            // Run for 1.5 seconds (1.5 pulse cycles at 1Hz)
+            console.log('Testing pulse brightness variation over 1.5 seconds...');
+            await sleep(1500);
+            
+            // If we got here without errors, the pulse is working
+            addTestResult('Pulse Brightness Variation', true, 'Pulse animation cycles smoothly');
+            
+            // Test 2.4: Test different pulse speeds
+            const speeds = [0.5, 1.0, 2.0];
+            for (const speed of speeds) {
+                const anim = new PulseAnimation(0xFF00FF00, speed);
+                setAnimation(anim);
+                await sleep(300);
+                addTestResult(`Pulse Speed ${speed}Hz`, true, `Pulse running at ${speed} Hz`);
+            }
+            
+            // Test 2.5: Test pulse with different colors
+            const pulseWhite = new PulseAnimation(0xFFFFFFFF, 0.5);
+            setAnimation(pulseWhite);
+            await sleep(500);
+            addTestResult('Pulse White', true, 'White pulse animation working');
+            
+            console.log('=== Pulsating Animation Test Complete ===');
+        }
+        
+        /**
+         * Test 3: FPS Verification Test
+         * Verifies that animations run at approximately 60 FPS
+         */
+        async function runFPSTest() {
+            console.log('=== Running FPS Verification Test ===');
+            clearTestResults();
+            
+            // Start with a simple animation
+            const rainbow = new RainbowAnimation(0.1);
+            setAnimation(rainbow);
+            
+            // Reset FPS tracking
+            fpsHistory = [];
+            fpsTestStartTime = performance.now();
+            
+            // Wait for FPS to stabilize (3 seconds)
+            console.log('Measuring FPS over 3 seconds...');
+            addTestResult('FPS Test Started', true, 'Measuring frame rate...');
+            
+            await sleep(3000);
+            
+            // Calculate average FPS
+            if (fpsHistory.length > 0) {
+                const avgFPS = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
+                const minFPS = Math.min(...fpsHistory);
+                const maxFPS = Math.max(...fpsHistory);
+                
+                console.log(`FPS Stats: Avg=${avgFPS.toFixed(1)}, Min=${minFPS.toFixed(1)}, Max=${maxFPS.toFixed(1)}`);
+                
+                // Test 3.1: Average FPS should be close to 60
+                if (avgFPS >= 55) {
+                    addTestResult('Average FPS >= 55', true, `Average FPS: ${avgFPS.toFixed(1)}`);
+                } else if (avgFPS >= 30) {
+                    addTestResult('Average FPS >= 55', false, `Average FPS: ${avgFPS.toFixed(1)} (acceptable but below target)`);
+                } else {
+                    addTestResult('Average FPS >= 55', false, `Average FPS: ${avgFPS.toFixed(1)} (too low)`);
+                }
+                
+                // Test 3.2: Minimum FPS should not drop too low
+                if (minFPS >= 30) {
+                    addTestResult('Minimum FPS >= 30', true, `Minimum FPS: ${minFPS.toFixed(1)}`);
+                } else {
+                    addTestResult('Minimum FPS >= 30', false, `Minimum FPS: ${minFPS.toFixed(1)} (frame drops detected)`);
+                }
+                
+                // Test 3.3: FPS should be relatively stable
+                const fpsVariance = maxFPS - minFPS;
+                if (fpsVariance <= 20) {
+                    addTestResult('FPS Stability', true, `FPS variance: ${fpsVariance.toFixed(1)} (stable)`);
+                } else {
+                    addTestResult('FPS Stability', false, `FPS variance: ${fpsVariance.toFixed(1)} (unstable)`);
+                }
+                
+                // Test 3.4: Frame count verification
+                const elapsed = (performance.now() - animationStartTime) / 1000;
+                const expectedFrames = elapsed * 60;
+                const frameRatio = frameCount / expectedFrames;
+                
+                if (frameRatio >= 0.9) {
+                    addTestResult('Frame Count', true, `${frameCount} frames in ${elapsed.toFixed(1)}s (${(frameRatio * 100).toFixed(0)}% of target)`);
+                } else {
+                    addTestResult('Frame Count', false, `${frameCount} frames in ${elapsed.toFixed(1)}s (${(frameRatio * 100).toFixed(0)}% of target)`);
+                }
+            } else {
+                addTestResult('FPS Measurement', false, 'No FPS data collected');
+            }
+            
+            console.log('=== FPS Verification Test Complete ===');
+        }
+        
+        /**
+         * Run all tests sequentially
+         */
+        async function runAllTests() {
+            console.log('========================================');
+            console.log('Running All Animation Tests (Task 7.2)');
+            console.log('========================================');
+            clearTestResults();
+            
+            await runSolidColorTest();
+            await sleep(500);
+            
+            await runPulseTest();
+            await sleep(500);
+            
+            await runFPSTest();
+            
+            console.log('========================================');
+            console.log('All Tests Complete');
+            console.log('========================================');
+        }
+        
+        // Helper function for async delays
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>

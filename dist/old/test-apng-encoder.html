@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APNG Encoder Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 { color: #4CAF50; }
+        h2 { color: #2196F3; margin-top: 30px; }
+        .test-section {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass { background: #1b5e20; }
+        .fail { background: #b71c1c; }
+        .info { background: #0d47a1; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #45a049; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        canvas {
+            border: 1px solid #444;
+            margin: 10px 0;
+            display: block;
+        }
+        #preview {
+            max-width: 100%;
+            border: 2px solid #4CAF50;
+            margin: 20px 0;
+        }
+        .stats {
+            font-family: monospace;
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        a {
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 APNG Encoder Test</h1>
+    <p>Testing the minimal APNG encoder for LED strip animations.</p>
+
+    <div class="test-section">
+        <h2>1. Unit Tests</h2>
+        <button onclick="runUnitTests()">Run Unit Tests</button>
+        <div id="unit-test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Simple Animation Test</h2>
+        <p>Creates a simple color cycling animation (10 frames)</p>
+        <canvas id="testCanvas" width="100" height="20"></canvas>
+        <button onclick="createSimpleAnimation()">Create Simple APNG</button>
+        <div id="simple-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. LED Strip Animation Test</h2>
+        <p>Simulates an LED strip animation (30 LEDs, 30 frames)</p>
+        <canvas id="ledCanvas" width="300" height="20"></canvas>
+        <button onclick="createLEDAnimation()">Create LED Strip APNG</button>
+        <div id="led-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Preview</h2>
+        <p>Generated APNG will appear below:</p>
+        <img id="preview" style="display: none;">
+        <div id="preview-stats" class="stats" style="display: none;"></div>
+        <a id="download-link" style="display: none;">Download APNG</a>
+    </div>
+
+    <!-- Pako for DEFLATE compression (high compression) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="apng.js"></script>
+    <script>
+        // ============================================
+        // Unit Tests
+        // ============================================
+        
+        function runUnitTests() {
+            var results = document.getElementById('unit-test-results');
+            results.innerHTML = '';
+            
+            var tests = [
+                testCRC32,
+                testPakoAvailable,
+                testDeflateStore,
+                testFilterImageData,
+                testAdaptiveFilter,
+                testAPNGCreation,
+                testAPNGAddFrame
+            ];
+            
+            var passed = 0;
+            var failed = 0;
+            
+            tests.forEach(function(test) {
+                try {
+                    var result = test();
+                    if (result.pass) {
+                        passed++;
+                        results.innerHTML += '<div class="test-result pass">✓ ' + result.name + '</div>';
+                    } else {
+                        failed++;
+                        results.innerHTML += '<div class="test-result fail">✗ ' + result.name + ': ' + result.error + '</div>';
+                    }
+                } catch (e) {
+                    failed++;
+                    results.innerHTML += '<div class="test-result fail">✗ ' + test.name + ': ' + e.message + '</div>';
+                }
+            });
+            
+            results.innerHTML += '<div class="test-result info">Results: ' + passed + ' passed, ' + failed + ' failed</div>';
+        }
+        
+        function testCRC32() {
+            // Test CRC32 with known value
+            // "IEND" should have CRC32 = 0xAE426082
+            var data = new Uint8Array([0x49, 0x45, 0x4E, 0x44]); // "IEND"
+            var crc = apngUtils.crc32(data);
+            var expected = 0xAE426082;
+            
+            return {
+                name: 'CRC32 calculation',
+                pass: crc === expected,
+                error: 'Expected ' + expected.toString(16) + ', got ' + crc.toString(16)
+            };
+        }
+        
+        function testPakoAvailable() {
+            // Test that pako is loaded
+            var hasPako = apngUtils.hasPako();
+            
+            return {
+                name: 'Pako compression library',
+                pass: hasPako,
+                error: 'Pako not loaded - compression will be unoptimized'
+            };
+        }
+        
+        function testDeflateStore() {
+            // Test compression produces valid output
+            var input = new Uint8Array([1, 2, 3, 4, 5]);
+            var output = apngUtils.compressData(input);
+            
+            // Check zlib header (0x78 for deflate)
+            var validHeader = output[0] === 0x78;
+            
+            // Check output exists
+            var validSize = output.length > 0;
+            
+            return {
+                name: 'Compression (pako: ' + apngUtils.hasPako() + ')',
+                pass: validHeader && validSize,
+                error: 'Invalid compressed output'
+            };
+        }
+        
+        function testFilterImageData() {
+            // Test PNG filtering adds filter bytes
+            var rgba = new Uint8Array(16); // 2x2 RGBA image
+            var filtered = apngUtils.filterImageDataSimple(rgba, 2, 2);
+            
+            // Should have 2 rows, each with 1 filter byte + 8 data bytes = 18 bytes total
+            var expectedSize = 2 * (1 + 2 * 4);
+            
+            // Check filter bytes are 0 (None filter) for simple mode
+            var validFilters = filtered[0] === 0 && filtered[9] === 0;
+            
+            return {
+                name: 'PNG filter application (simple)',
+                pass: filtered.length === expectedSize && validFilters,
+                error: 'Expected ' + expectedSize + ' bytes, got ' + filtered.length
+            };
+        }
+        
+        function testAdaptiveFilter() {
+            // Test adaptive filtering
+            var rgba = new Uint8Array(32); // 2x2 RGBA image (but 4 rows for testing)
+            // Fill with gradient pattern
+            for (var i = 0; i < 32; i++) {
+                rgba[i] = i * 8;
+            }
+            var filtered = apngUtils.filterImageDataAdaptive(rgba, 2, 2);
+            
+            // Should have 2 rows, each with 1 filter byte + 8 data bytes = 18 bytes total
+            var expectedSize = 2 * (1 + 2 * 4);
+            
+            // Filter bytes should be 0-4 (valid filter types)
+            var validFilters = filtered[0] >= 0 && filtered[0] <= 4;
+            
+            return {
+                name: 'PNG adaptive filtering',
+                pass: filtered.length === expectedSize && validFilters,
+                error: 'Expected ' + expectedSize + ' bytes with valid filter, got ' + filtered.length + ', filter=' + filtered[0]
+            };
+        }
+        
+        function testAPNGCreation() {
+            // Test APNG object creation
+            var apng = new APNG({ width: 100, height: 50, repeat: 0 });
+            
+            return {
+                name: 'APNG object creation',
+                pass: apng.width === 100 && apng.height === 50 && apng.repeat === 0,
+                error: 'Invalid APNG properties'
+            };
+        }
+        
+        function testAPNGAddFrame() {
+            // Test adding a frame from ImageData
+            var apng = new APNG({ width: 2, height: 2 });
+            var imageData = new ImageData(2, 2);
+            
+            // Fill with red
+            for (var i = 0; i < 16; i += 4) {
+                imageData.data[i] = 255;     // R
+                imageData.data[i + 1] = 0;   // G
+                imageData.data[i + 2] = 0;   // B
+                imageData.data[i + 3] = 255; // A
+            }
+            
+            apng.addFrame(imageData, { delay: 100 });
+            
+            return {
+                name: 'APNG addFrame',
+                pass: apng.frames.length === 1 && apng.frames[0].delay === 100,
+                error: 'Frame not added correctly'
+            };
+        }
+        
+        // ============================================
+        // Animation Tests
+        // ============================================
+        
+        function createSimpleAnimation() {
+            var results = document.getElementById('simple-results');
+            results.innerHTML = '<div class="test-result info">Creating animation...</div>';
+            
+            var canvas = document.getElementById('testCanvas');
+            var ctx = canvas.getContext('2d');
+            
+            var apng = new APNG({
+                width: canvas.width,
+                height: canvas.height,
+                repeat: 0
+            });
+            
+            // Create 10 frames with color cycling
+            var colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', 
+                          '#4B0082', '#9400D3', '#FF1493', '#00FFFF', '#FF0000'];
+            
+            for (var i = 0; i < colors.length; i++) {
+                ctx.fillStyle = colors[i];
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                apng.addFrame(ctx, { delay: 200 });
+            }
+            
+            try {
+                var startTime = performance.now();
+                var blob = apng.render();
+                var endTime = performance.now();
+                
+                showPreview(blob, {
+                    frames: colors.length,
+                    width: canvas.width,
+                    height: canvas.height,
+                    time: endTime - startTime
+                });
+                
+                results.innerHTML = '<div class="test-result pass">✓ Created ' + colors.length + 
+                    ' frame APNG (' + formatBytes(blob.size) + ') in ' + 
+                    (endTime - startTime).toFixed(2) + 'ms</div>';
+            } catch (e) {
+                results.innerHTML = '<div class="test-result fail">✗ Error: ' + e.message + '</div>';
+            }
+        }
+        
+        function createLEDAnimation() {
+            var results = document.getElementById('led-results');
+            results.innerHTML = '<div class="test-result info">Creating LED animation...</div>';
+            
+            var canvas = document.getElementById('ledCanvas');
+            var ctx = canvas.getContext('2d');
+            var ledCount = 30;
+            var ledWidth = canvas.width / ledCount;
+            var frames = 30;
+            
+            var apng = new APNG({
+                width: canvas.width,
+                height: canvas.height,
+                repeat: 0
+            });
+            
+            // Create rainbow chase animation
+            for (var frame = 0; frame < frames; frame++) {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                for (var led = 0; led < ledCount; led++) {
+                    var hue = ((led + frame) * 360 / ledCount) % 360;
+                    ctx.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+                    ctx.fillRect(led * ledWidth, 0, ledWidth - 1, canvas.height);
+                }
+                
+                apng.addFrame(ctx, { delay: 33 }); // ~30 FPS
+            }
+            
+            try {
+                var startTime = performance.now();
+                var blob = apng.render();
+                var endTime = performance.now();
+                
+                showPreview(blob, {
+                    frames: frames,
+                    width: canvas.width,
+                    height: canvas.height,
+                    time: endTime - startTime
+                });
+                
+                results.innerHTML = '<div class="test-result pass">✓ Created ' + frames + 
+                    ' frame LED animation (' + formatBytes(blob.size) + ') in ' + 
+                    (endTime - startTime).toFixed(2) + 'ms</div>';
+            } catch (e) {
+                results.innerHTML = '<div class="test-result fail">✗ Error: ' + e.message + '</div>';
+            }
+        }
+        
+        // ============================================
+        // Helpers
+        // ============================================
+        
+        function showPreview(blob, stats) {
+            var preview = document.getElementById('preview');
+            var statsDiv = document.getElementById('preview-stats');
+            var downloadLink = document.getElementById('download-link');
+            
+            // Create object URL for preview
+            var url = URL.createObjectURL(blob);
+            preview.src = url;
+            preview.style.display = 'block';
+            
+            // Show stats
+            statsDiv.innerHTML = 
+                'Frames: ' + stats.frames + '<br>' +
+                'Size: ' + stats.width + 'x' + stats.height + '<br>' +
+                'File size: ' + formatBytes(blob.size) + '<br>' +
+                'Encoding time: ' + stats.time.toFixed(2) + 'ms';
+            statsDiv.style.display = 'block';
+            
+            // Setup download link
+            downloadLink.href = url;
+            downloadLink.download = 'animation.png';
+            downloadLink.style.display = 'inline-block';
+            downloadLink.textContent = 'Download APNG (' + formatBytes(blob.size) + ')';
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+    </script>
+</body>
+</html>

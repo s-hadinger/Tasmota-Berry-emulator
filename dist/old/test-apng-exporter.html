@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APNG Exporter Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 { color: #4CAF50; }
+        h2 { color: #2196F3; margin-top: 30px; }
+        .test-section {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass { background: #1b5e20; }
+        .fail { background: #b71c1c; }
+        .info { background: #0d47a1; }
+        .warn { background: #e65100; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #45a049; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        button.cancel { background: #f44336; }
+        button.cancel:hover { background: #d32f2f; }
+        canvas {
+            border: 1px solid #444;
+            margin: 10px 0;
+            display: block;
+        }
+        #preview {
+            max-width: 100%;
+            border: 2px solid #4CAF50;
+            margin: 20px 0;
+        }
+        .stats {
+            font-family: monospace;
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.1s ease;
+            width: 0%;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        a {
+            color: #4CAF50;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        select, input[type="number"] {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #333;
+            color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 APNG Exporter Test</h1>
+    <p>Testing the APNGExporter class with virtual time frame capture.</p>
+    <p><strong>Note:</strong> This test page simulates the Berry VM and animation loop for standalone testing.</p>
+
+    <div class="test-section">
+        <h2>1. Unit Tests</h2>
+        <button onclick="runUnitTests()">Run Unit Tests</button>
+        <div id="unit-test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Export Test (Simulated Animation)</h2>
+        <p>Tests the APNGExporter with a simulated animation loop.</p>
+        <canvas id="testCanvas" width="300" height="30"></canvas>
+        
+        <div class="controls">
+            <label>
+                FPS:
+                <select id="fps-select">
+                    <option value="15">15 FPS</option>
+                    <option value="30" selected>30 FPS</option>
+                    <option value="60">60 FPS</option>
+                </select>
+            </label>
+            <label>
+                Duration:
+                <input type="number" id="duration-input" value="2" min="1" max="10" style="width: 60px;"> sec
+            </label>
+            <button id="export-btn" onclick="startExport()">Export APNG</button>
+            <button id="cancel-btn" class="cancel" onclick="cancelExport()" disabled>Cancel</button>
+        </div>
+        
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div id="progress-text" class="progress-text">Ready</div>
+        
+        <div id="export-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Preview</h2>
+        <p>Generated APNG will appear below:</p>
+        <img id="preview" style="display: none;">
+        <div id="preview-stats" class="stats" style="display: none;"></div>
+        <a id="download-link" style="display: none;">Download APNG</a>
+    </div>
+
+    <div class="test-section">
+        <h2>4. APNG Features</h2>
+        <ul>
+            <li>✅ Full 24-bit color (16.7 million colors)</li>
+            <li>✅ Alpha transparency support</li>
+            <li>✅ No color banding or dithering artifacts</li>
+            <li>✅ High compression with pako + adaptive filtering</li>
+        </ul>
+    </div>
+
+    <!-- Pako for DEFLATE compression (high compression) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <!-- Load APNG encoder and exporter -->
+    <script src="apng.js"></script>
+    <script src="apng-exporter.js"></script>
+    
+    <script>
+        // ============================================
+        // Mock Berry VM and Animation Loop
+        // ============================================
+        
+        // Simulated animation state
+        var animationState = {
+            time: 0,
+            ledCount: 30,
+            canvas: null,
+            ctx: null
+        };
+        
+        // Mock Berry VM
+        window.berryVM = {
+            ready: true,
+            millis: function() {
+                return animationState.time;
+            },
+            callGlobal: function(funcName) {
+                if (funcName === '_fast_loop') {
+                    // Simulate animation update
+                    renderSimulatedAnimation();
+                }
+            }
+        };
+        
+        // Mock tasmota_millis (will be overridden by virtual time)
+        window.tasmota_millis = function() {
+            return animationState.time;
+        };
+        
+        // Mock animation loop
+        window.animationLoop = {
+            isRunning: true,
+            stop: function() {
+                this.isRunning = false;
+                console.log('[Mock] Animation loop stopped');
+            },
+            start: function() {
+                this.isRunning = true;
+                console.log('[Mock] Animation loop started');
+            }
+        };
+        
+        // Render simulated rainbow chase animation
+        function renderSimulatedAnimation() {
+            var canvas = animationState.canvas;
+            var ctx = animationState.ctx;
+            if (!canvas || !ctx) return;
+            
+            var time = window.tasmota_millis();
+            var ledCount = animationState.ledCount;
+            var ledWidth = canvas.width / ledCount;
+            
+            // Clear canvas
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw rainbow chase
+            for (var i = 0; i < ledCount; i++) {
+                var hue = ((i * 360 / ledCount) + (time / 10)) % 360;
+                ctx.fillStyle = 'hsl(' + hue + ', 100%, 50%)';
+                ctx.fillRect(i * ledWidth, 0, ledWidth - 1, canvas.height);
+            }
+        }
+        
+        // ============================================
+        // APNGExporter instance
+        // ============================================
+        
+        var exporter = null;
+        
+        // ============================================
+        // Unit Tests
+        // ============================================
+        
+        function runUnitTests() {
+            var results = document.getElementById('unit-test-results');
+            results.innerHTML = '';
+            
+            var tests = [
+                testAPNGExporterCreation,
+                testSetCanvas,
+                testVirtualTimeSystem,
+                testCallbacks,
+                testValidation
+            ];
+            
+            var passed = 0;
+            var failed = 0;
+            
+            tests.forEach(function(test) {
+                try {
+                    var result = test();
+                    if (result.pass) {
+                        passed++;
+                        results.innerHTML += '<div class="test-result pass">✓ ' + result.name + '</div>';
+                    } else {
+                        failed++;
+                        results.innerHTML += '<div class="test-result fail">✗ ' + result.name + ': ' + result.error + '</div>';
+                    }
+                } catch (e) {
+                    failed++;
+                    results.innerHTML += '<div class="test-result fail">✗ ' + test.name + ': ' + e.message + '</div>';
+                }
+            });
+            
+            results.innerHTML += '<div class="test-result info">Results: ' + passed + ' passed, ' + failed + ' failed</div>';
+        }
+        
+        function testAPNGExporterCreation() {
+            var exp = new APNGExporter({ repeat: 0 });
+            return {
+                name: 'APNGExporter creation',
+                pass: exp !== null && exp.repeat === 0 && exp.isCapturing === false,
+                error: 'Failed to create APNGExporter'
+            };
+        }
+        
+        function testSetCanvas() {
+            var exp = new APNGExporter();
+            var canvas = document.getElementById('testCanvas');
+            exp.setCanvas(canvas);
+            
+            return {
+                name: 'setCanvas method',
+                pass: exp.canvas === canvas,
+                error: 'Canvas not set correctly'
+            };
+        }
+        
+        function testVirtualTimeSystem() {
+            // Test virtual time utilities
+            var initialTime = window.tasmota_millis();
+            
+            apngExporterVirtualTime.enable(1000);
+            var virtualTime1 = window.tasmota_millis();
+            
+            apngExporterVirtualTime.advance(500);
+            var virtualTime2 = window.tasmota_millis();
+            
+            var isEnabled = apngExporterVirtualTime.isEnabled();
+            
+            apngExporterVirtualTime.disable();
+            var isDisabled = !apngExporterVirtualTime.isEnabled();
+            
+            return {
+                name: 'Virtual time system',
+                pass: virtualTime1 === 1000 && virtualTime2 === 1500 && isEnabled && isDisabled,
+                error: 'Virtual time not working correctly'
+            };
+        }
+        
+        function testCallbacks() {
+            var exp = new APNGExporter();
+            var progressCalled = false;
+            var completeCalled = false;
+            var errorCalled = false;
+            
+            exp.setOnProgress(function() { progressCalled = true; });
+            exp.setOnComplete(function() { completeCalled = true; });
+            exp.setOnError(function() { errorCalled = true; });
+            
+            return {
+                name: 'Callback setters',
+                pass: exp.onProgress !== null && exp.onComplete !== null && exp.onError !== null,
+                error: 'Callbacks not set correctly'
+            };
+        }
+        
+        function testValidation() {
+            var exp = new APNGExporter();
+            
+            // Test without canvas
+            var result1 = exp.startCapture(30, 2);
+            
+            return {
+                name: 'Parameter validation',
+                pass: result1 instanceof Promise, // Should return a promise (that resolves to null)
+                error: 'Validation not working'
+            };
+        }
+        
+        // ============================================
+        // Export Test
+        // ============================================
+        
+        function startExport() {
+            var canvas = document.getElementById('testCanvas');
+            var fps = parseInt(document.getElementById('fps-select').value, 10);
+            var duration = parseInt(document.getElementById('duration-input').value, 10);
+            var results = document.getElementById('export-results');
+            
+            // Initialize animation state
+            animationState.canvas = canvas;
+            animationState.ctx = canvas.getContext('2d');
+            animationState.time = 0;
+            
+            // Render initial frame
+            renderSimulatedAnimation();
+            
+            // Create exporter
+            exporter = new APNGExporter({
+                canvas: canvas,
+                repeat: 0
+            });
+            
+            // Set callbacks
+            exporter.setOnProgress(function(progress, phase) {
+                updateProgress(progress, phase);
+            });
+            
+            exporter.setOnComplete(function(result) {
+                showResult(result);
+            });
+            
+            exporter.setOnError(function(message) {
+                results.innerHTML = '<div class="test-result fail">✗ Error: ' + message + '</div>';
+            });
+            
+            // Update UI
+            document.getElementById('export-btn').disabled = true;
+            document.getElementById('cancel-btn').disabled = false;
+            results.innerHTML = '<div class="test-result info">Starting export...</div>';
+            
+            // Start capture
+            exporter.startCapture(fps, duration).then(function(result) {
+                document.getElementById('export-btn').disabled = false;
+                document.getElementById('cancel-btn').disabled = true;
+                
+                if (!result) {
+                    if (exporter.isCancelled) {
+                        results.innerHTML = '<div class="test-result warn">Export cancelled</div>';
+                    }
+                }
+            });
+        }
+        
+        function cancelExport() {
+            if (exporter) {
+                exporter.cancel();
+            }
+        }
+        
+        function updateProgress(progress, phase) {
+            var fill = document.getElementById('progress-fill');
+            var text = document.getElementById('progress-text');
+            
+            fill.style.width = progress + '%';
+            
+            var phaseText = {
+                'capturing': 'Capturing frames...',
+                'encoding': 'Encoding APNG...',
+                'complete': 'Complete!',
+                'cancelled': 'Cancelled'
+            };
+            
+            text.textContent = (phaseText[phase] || phase) + ' (' + Math.round(progress) + '%)';
+        }
+        
+        function showResult(result) {
+            var results = document.getElementById('export-results');
+            var preview = document.getElementById('preview');
+            var statsDiv = document.getElementById('preview-stats');
+            var downloadLink = document.getElementById('download-link');
+            
+            // Show success message
+            results.innerHTML = '<div class="test-result pass">✓ Created ' + result.stats.frames + 
+                ' frame APNG (' + formatBytes(result.stats.fileSize) + ') in ' + 
+                result.stats.captureTime.toFixed(2) + 'ms</div>';
+            
+            // Create object URL for preview
+            var url = URL.createObjectURL(result.blob);
+            preview.src = url;
+            preview.style.display = 'block';
+            
+            // Show stats
+            statsDiv.innerHTML = 
+                'Format: APNG (Animated PNG)<br>' +
+                'Frames: ' + result.stats.frames + '<br>' +
+                'FPS: ' + result.stats.fps + '<br>' +
+                'Duration: ' + result.stats.duration + 's<br>' +
+                'Size: ' + result.stats.width + 'x' + result.stats.height + '<br>' +
+                'File size: ' + formatBytes(result.stats.fileSize) + '<br>' +
+                'Capture time: ' + result.stats.captureTime.toFixed(2) + 'ms';
+            statsDiv.style.display = 'block';
+            
+            // Setup download link
+            downloadLink.href = url;
+            downloadLink.download = result.filename;
+            downloadLink.style.display = 'inline-block';
+            downloadLink.textContent = 'Download APNG (' + formatBytes(result.stats.fileSize) + ')';
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        
+        // ============================================
+        // Initialize
+        // ============================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize canvas
+            animationState.canvas = document.getElementById('testCanvas');
+            animationState.ctx = animationState.canvas.getContext('2d');
+            
+            // Render initial frame
+            renderSimulatedAnimation();
+            
+            console.log('[Test] APNG Exporter test page initialized');
+        });
+    </script>
+</body>
+</html>

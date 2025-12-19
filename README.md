@@ -1,177 +1,176 @@
-# Tasmota-Berry-emulator
+# Berry Animation Simulator
 
-This project is part of the [Tasmota](https://github.com/arendst/Tasmota) project. Since end of 2023, Tasmota introduced an [animation framework](https://tasmota.github.io/docs/Berry_Addressable-LED/#animation-framework-module-animate) for Leds based on the embedded [Berry](https://tasmota.github.io/docs/Berry/) programming languages. However iterating when building new animations requires numerous updates on the Tasmota devices and reboots.
+A browser-based simulator for the [Berry Animation Framework](lib/libesp32/berry_animation/README.md), enabling LED strip animation development and testing directly in your web browser without hardware.
 
-This project is a minimal Tasmota/Berry emulator enabling to run and try animations on a laptop, without the need to iterate on an actual embedded device. The goal is to provide an animated image (animated GIF or else) to vizualize the result and iterate.
+## 🌐 Try It Now
 
-## Installation
+**[Launch the Simulator](https://raw.githubusercontent.com/s-hadinger/Tasmota-Berry-emulator/main/dist/index.html)**
 
-Requirements: Pyhton 3.x, C standard compiler
+No installation required - runs entirely in your browser.
 
-### Step 1. Clone the repository
+## About
+
+This project is part of [Tasmota](https://github.com/arendst/Tasmota), an open-source firmware for ESP32/ESP8266 devices. Tasmota provides extensive home automation capabilities, including addressable LED strip control through the [Berry scripting language](https://berry.readthedocs.io/).
+
+The Berry Animation Framework introduces a simplified Domain-Specific Language (DSL) for creating LED animations. This simulator compiles the Berry interpreter to WebAssembly, allowing you to develop and test animations in your browser before deploying to hardware.
+
+## ✨ Features
+
+- **Browser-Based** - No hardware required, runs entirely in WebAssembly
+- **Real-Time Preview** - See your animations on a virtual LED strip
+- **DSL Support** - Write animations using the simplified animation DSL
+- **Berry Support** - Full Berry language support for advanced animations
+- **Example Library** - Browse and run example animations instantly
+- **APNG Export** - Export animations as animated PNG files for sharing
+- **Tasmota UI** - Familiar interface matching Tasmota's web UI style
+
+## 🎬 Animation Examples
+
+| Rainbow Wave | Fire Effect |
+|:---:|:---:|
+| ![Color Pattern](docs/img/color_pattern-15fps-5s.png) | Cycling color pattern |
+| ![Cylon red eye](docs/img/cylon-15fps-5s.png) | Cylon red eye |
+
+## 🚀 Quick Start
+
+### Using the Online Simulator
+
+1. Open the [simulator](https://raw.githubusercontent.com/s-hadinger/Tasmota-Berry-emulator/main/dist/index.html)
+2. Select an example from the Animation Library panel
+3. Click "Compile & Run" to see the animation
+4. Modify the code and experiment!
+
+### Running Locally
 
 ```bash
+# Clone the repository
 git clone https://github.com/s-hadinger/Tasmota-Berry-emulator.git
 cd Tasmota-Berry-emulator
+
+# Open in browser (no server required)
+open dist/index.html
 ```
 
-### Step 2. Compile Berry
+## 📝 Writing Animations
 
-```bash
-make
-cd ..
-```
-
-You should see something like this:
-
-```bash
-> make
-[Prebuild] generate resources
-[Compile] src/be_api.c
-[Compile] src/be_baselib.c
-[Compile] src/be_bytecode.c
-[Compile] src/be_byteslib.c
-[Compile] src/be_class.c
-[Compile] src/be_code.c
-[Compile] src/be_debug.c
-[Compile] src/be_debuglib.c
-[Compile] src/be_exec.c
-[Compile] src/be_filelib.c
-[Compile] src/be_func.c
-[Compile] src/be_gc.c
-[Compile] src/be_gclib.c
-[Compile] src/be_globallib.c
-[Compile] src/be_introspectlib.c
-[Compile] src/be_jsonlib.c
-[Compile] src/be_lexer.c
-[Compile] src/be_libs.c
-[Compile] src/be_list.c
-[Compile] src/be_listlib.c
-[Compile] src/be_map.c
-[Compile] src/be_maplib.c
-[Compile] src/be_mathlib.c
-[Compile] src/be_mem.c
-[Compile] src/be_module.c
-[Compile] src/be_object.c
-[Compile] src/be_oslib.c
-[Compile] src/be_parser.c
-[Compile] src/be_rangelib.c
-[Compile] src/be_repl.c
-[Compile] src/be_solidifylib.c
-[Compile] src/be_strictlib.c
-[Compile] src/be_string.c
-[Compile] src/be_strlib.c
-[Compile] src/be_syslib.c
-[Compile] src/be_timelib.c
-[Compile] src/be_undefinedlib.c
-[Compile] src/be_var.c
-[Compile] src/be_vector.c
-[Compile] src/be_vm.c
-[Compile] default/be_modtab.c
-[Compile] default/be_port.c
-[Compile] default/be_re_lib.c
-[Compile] default/berry.c
-[Compile] re1.5/backtrack.c
-[Compile] re1.5/charclass.c
-[Compile] re1.5/cleanmarks.c
-[Compile] re1.5/compile.c
-[Compile] re1.5/compilecode.c
-[Compile] re1.5/dumpcode.c
-[Compile] re1.5/pike.c
-[Compile] re1.5/recursive.c
-[Compile] re1.5/recursiveloop.c
-[Compile] re1.5/sub.c
-[Compile] re1.5/thompson.c
-[Compile] re1.5/util.c
-[Linking...]
-done
-```
-
-### Step 3. Prepare the Python environnement
-
-```bash
-python3 -m venv python_env
-source python_env/bin/activate
-python3 -m pip install "imageio"
-```
-
-Output:
-
-```bash
-> python3 -m venv python_env
-> source python_env/bin/activate
-> python3 -m pip install "imageio"
-[... lots of linees]
-Successfully installed imageio-2.33.1 numpy-1.26.2 pillow-10.1.0
-```
-
-## How to use
-
-Copy your animation script in directory `tasmota` and run the following:
-
-```bash
-./run_animate.be tasmota/<file>.be
-python3 generate_gif.py output.jsonl
-```
-
-Example:
-
-```bash
-> ./run_animate.be tasmota/animate_demo_cylon.be
-Animation exported to 'output.jsonl'
-> python3 generate_gif.py output.jsonl -o cylon.gif
-```
-
-## Example
-
-#### demo_pulse
-
-<img src='/demo_gif/pulse.gif' height='20'>
-
-Berry code:
+The simulator includes a library of example animations - just select one from the Animation Library panel and click "Compile & Run". Here's a sample of what the DSL looks like:
 
 ```berry
-import animate
+# @desc Smooth color transitions using rich_palette with sine interpolation
 
-var strip = Leds(5 * 5, gpio.pin(gpio.WS2812, 0))
-var anim = animate.core(strip)
-anim.set_back_color(0x2222AA)
-var pulse = animate.pulse(0xFF4444, 2, 1)
-var osc1 = animate.oscillator(-3, 26, 5000, animate.COSINE)
-osc1.set_cb(pulse, pulse.set_pos)
+# define a palette of rainbow colors including white with constant brightness
+palette rainbow_with_white = [
+  0xFC0000        # Red
+  0xFF8000        # Orange
+  0xFFFF00        # Yellow
+  0x00FF00        # Green
+  0x00FFFF        # Cyan
+  0x0080FF        # Blue
+  0x8000FF        # Violet
+  0xCCCCCC        # White
+  0xFC0000        # Red - need to add the first color at last position to ensure roll-over
+]
 
-# animate color of pulse
-var palette = animate.palette(animate.PALETTE_STANDARD_TAG, 30000)
-palette.set_cb(pulse, pulse.set_color)
+# define a color attribute that cycles over time, cycle is 10 seconds
+color rainbow_rich_color = rich_palette(palette=rainbow_with_white, cycle_period=10s, transition_type=SINE)
 
-anim.start()
+animation back = solid(color=rainbow_rich_color)
+
+run back
 ```
+
+## 📚 Documentation
+
+### Animation Framework
+- **[Animation Framework README](lib/libesp32/berry_animation/README.md)** - Overview and quick start
+- **[DSL Reference](lib/libesp32/berry_animation/docs/DSL_REFERENCE.md)** - Complete DSL syntax
+- **[Animation Classes](lib/libesp32/berry_animation/docs/ANIMATION_CLASS_HIERARCHY.md)** - Available animations
+
+### Simulator
+- **[Berry JS Module](docs/BERRY_JS_MODULE.md)** - JavaScript bridge API for Berry
+- **[LED Strip API](docs/LED_STRIP_API_GUIDE.md)** - LED rendering API
+
+### External Resources
+- **[Tasmota Documentation](https://tasmota.github.io/)** - Official Tasmota docs
+- **[Berry Language](https://berry.readthedocs.io/)** - Berry language reference
+- **[Tasmota Berry Guide](https://tasmota.github.io/docs/Berry/)** - Berry in Tasmota
+
+## 🛠️ Building from Source
+
+### Prerequisites
+
+- [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) for WebAssembly compilation
+- Make and Clang (recommended) or GCC
+
+### Build Commands
 
 ```bash
-> ./run_animate.be -d 30000 tasmota/animate_demo_pulse.be
-Animation exported to 'output.jsonl'
-> python3 generate_gif.py output.jsonl -o pulse.gif
+# Full build (native + WebAssembly)
+./build.sh
+
+# Or build separately:
+
+# Native Berry interpreter
+make -C berry-lang clean
+make -C berry-lang
+
+# WebAssembly build
+source emsdk/emsdk_env.sh
+make -C berry-lang clean BUILD_MODE=emsdk
+make -C berry-lang BUILD_MODE=emsdk
 ```
 
-#### demo_cylon
-
-<img src='/demo_gif/cylon.gif' height='20'>
-
-```berry
-import animate
-
-var strip = Leds(5 * 5, gpio.pin(gpio.WS2812, 0))
-var anim = animate.core(strip)
-anim.set_back_color(0x000000)
-var pulse = animate.pulse(0xFF0000, 3, 2)
-var osc1 = animate.oscillator(0, 23, 3000, animate.TRIANGLE)
-osc1.set_cb(pulse, pulse.set_pos)
-
-anim.start()
-```
+### Running Tests
 
 ```bash
-> ./run_animate.be -d 3000 tasmota/animate_demo_cylon.be
-Animation exported to 'output.jsonl'
-> python3 generate_gif.py output.jsonl -o cylon.gif
+# Run all tests
+./run_all_tests.sh
+
+# Compile all DSL examples
+./compile_all_dsl_examples.sh
 ```
+
+## 📁 Project Structure
+
+```
+├── dist/                    # Browser simulator files
+│   ├── index.html          # Main simulator page
+│   ├── berry.js            # Berry WASM module
+│   └── *.js                # JavaScript modules
+├── lib/libesp32/berry_animation/
+│   ├── src/                # Animation framework source
+│   ├── anim_examples/      # Example animations
+│   ├── anim_tutorials/     # Tutorial animations
+│   └── docs/               # Framework documentation
+├── berry-lang/             # Berry interpreter source
+├── tasmota_env/            # Tasmota emulator for local dev
+├── docs/                   # Simulator documentation
+└── emsdk/                  # Emscripten SDK
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! This project is part of the Tasmota ecosystem.
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test with the simulator
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
+
+Part of the [Tasmota](https://github.com/arendst/Tasmota) project.
+
+## 🔗 Links
+
+- **[Tasmota GitHub](https://github.com/arendst/Tasmota)** - Main Tasmota repository
+- **[Tasmota Documentation](https://tasmota.github.io/)** - Official documentation
+- **[Berry Language](https://berry.readthedocs.io/)** - Berry scripting language
+- **[Berry Short Manual (PDF)](https://berry.readthedocs.io/en/latest/_static/berry_short_manual.pdf)** - 8-page Berry reference
+
+---
+
+**Happy Animating!** 🎨✨

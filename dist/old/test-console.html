@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBACAAEAAQCwAAAAFgAAACgAAAAQAAAAIAAAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////AP5/b+H6X2/h8k9v4eZnb+Hud2/h7ndv4e53b+FmZm/hMkxv4ZgZb+HOc2/h5+dv4fPPb+H5n2/h/D9v4f5/b+EAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4E">
+    <title>Console Panel Test - Tasmota Style</title>
+    <link rel="stylesheet" href="assets/css/tasmota.css">
+</head>
+<body>
+    <div style='background:var(--c_bg);text-align:left;display:inline-block;color:var(--c_txt);min-width:340px;position:relative;'>
+        <!-- Header -->
+        <div style='text-align:center;color:var(--c_ttl);'>
+            <h3>ESP32-DevKit</h3>
+            <h2>Console Panel Test</h2>
+        </div>
+
+        <!-- Test Controls -->
+        <fieldset>
+            <legend><b>&nbsp;Test Controls&nbsp;</b></legend>
+            <p></p>
+            <button id="btn-log" class="bgrn">Log Message</button>
+            <p></p>
+            <button id="btn-info">Info Message</button>
+            <p></p>
+            <button id="btn-warn" style="background:var(--c_tab);">Warning Message</button>
+            <p></p>
+            <button id="btn-error" class="bred">Error Message</button>
+            <p></p>
+            <button id="btn-success" class="bgrn">Success Message</button>
+            <p></p>
+            <button id="btn-flood">Flood Test (50 messages)</button>
+        </fieldset>
+
+        <p></p>
+
+        <!-- Console Output -->
+        <fieldset class="console-fieldset">
+            <legend><b>&nbsp;Console&nbsp;</b></legend>
+            <div class="console-header">
+                <label>
+                    <input type="checkbox" id="console-autoscroll" checked>
+                    <b>Auto-scroll</b>
+                </label>
+                <span id="console-line-count" style="color:var(--c_tab);font-size:0.9em;">0 lines</span>
+            </div>
+            <textarea id="console-output" class="console-output" readonly placeholder="Console output will appear here..."></textarea>
+            <p></p>
+            <button id="btn-clear" class="bred">Clear Console</button>
+        </fieldset>
+
+        <p></p>
+
+        <!-- Footer -->
+        <div style='text-align:right;font-size:11px;'>
+            <hr>
+            <a href='index.html' style='color:#aaa;'>Back to Simulator</a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="console.js"></script>
+    <script>
+        // Initialize console manager when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize console
+            window.initConsole({
+                outputId: 'console-output',
+                clearBtnId: 'btn-clear',
+                autoScrollId: 'console-autoscroll',
+                lineCountId: 'console-line-count',
+                maxLines: 500,
+                showTimestamps: true
+            });
+            
+            // Log initial message
+            window.consoleManager.success('Console test page initialized');
+            window.consoleManager.info('Click buttons to test different message types');
+            
+            // Set up test button handlers
+            document.getElementById('btn-log').addEventListener('click', function() {
+                window.consoleManager.log('This is a regular log message');
+            });
+            
+            document.getElementById('btn-info').addEventListener('click', function() {
+                window.consoleManager.info('This is an info message');
+            });
+            
+            document.getElementById('btn-warn').addEventListener('click', function() {
+                window.consoleManager.warn('This is a warning message');
+            });
+            
+            document.getElementById('btn-error').addEventListener('click', function() {
+                window.consoleManager.error('This is an error message');
+            });
+            
+            document.getElementById('btn-success').addEventListener('click', function() {
+                window.consoleManager.success('This is a success message');
+            });
+            
+            document.getElementById('btn-flood').addEventListener('click', function() {
+                window.consoleManager.info('Starting flood test...');
+                for (let i = 1; i <= 50; i++) {
+                    window.consoleManager.log('Flood message #' + i + ' - Testing auto-scroll and line count');
+                }
+                window.consoleManager.success('Flood test complete');
+            });
+            
+            // Test console.log interception
+            console.log('Console.log interception test');
+        });
+    </script>
+</body>
+</html>

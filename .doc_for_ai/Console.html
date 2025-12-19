@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="en" class=""><head>
+    <meta charset='utf-8'><meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBACAAEAAQCwAAAAFgAAACgAAAAQAAAAIAAAAAEAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////AP5/b+H6X2/h8k9v4eZnb+Hud2/h7ndv4e53b+FmZm/hMkxv4ZgZb+HOc2/h5+dv4fPPb+H5n2/h/D9v4f5/b+EAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4EAADuBAAA7gQAAO4E">
+    <title>Tasmota Console</title>
+    <script>var x=null,lt,to,tp,pc='';eb=s=>document.getElementById(s);qs=s=>document.querySelector(s);sp=i=>eb(i).type=(eb(i).type==='text'?'password':'text');wl=f=>window.addEventListener('load',f);var sn=0,id=0,ft,ltm=450;function l(p){var c,o='';clearTimeout(lt);clearTimeout(ft);t=eb('t1');if(p==1){c=eb('c1');o='&c1='+encodeURIComponent(c.value);c.value='';t.scrollTop=1e8;sn=t.scrollTop;}if(t.scrollTop>=sn){if(x!=null){x.abort();}x=new XMLHttpRequest();x.onreadystatechange=()=>{if(x.readyState==4&&x.status==200){var z,d;d=x.responseText.split(/}1/);id=d.shift();if(d.shift()==0){t.value='';}z=d.shift();if(z.length>0){t.value+=z;}t.scrollTop=1e8;sn=t.scrollTop;clearTimeout(ft);lt=setTimeout(l,ltm);}};x.open('GET','cs?c2='+id+o,true);x.send();ft=setTimeout(l,2e4);}else{lt=setTimeout(l,ltm);}return false;}wl(l);var hc=[],cn=0;function h(){eb('c1').addEventListener('keydown',e=>{var b=eb('c1'),c=e.keyCode;if(38==c||40==c){b.autocomplete='off';setTimeout(b=>{b.focus();b.setSelectionRange(1e9,1e9)},0,b)}38==c?(++cn>hc.length&&(cn=hc.length),b.value=hc[cn-1]||''):40==c?(0>--cn&&(cn=0),b.value=hc[cn-1]||''):13==c&&(hc.length>19&&hc.pop(),hc.unshift(b.value),cn=0)});}wl(h);function jd(){var t=0,i=document.querySelectorAll('input,button,textarea,select');while(i.length>=t){if(i[t]){i[t]['name']=(i[t].hasAttribute('id')&&(!i[t].hasAttribute('name')))?i[t]['id']:i[t]['name'];}t++;}}function sf(s){var t=0,i=document.querySelectorAll('.hf');while(i.length>=t){if(i[t]){i[t].style.display=s?'block':'none';}t++;}}wl(jd);function su(t){eb('f3').style.display='none';eb('f2').style.display='block';t.form.submit();}function upl(t){var sl=t.form['u2'].files[0].slice(0,1);var rd=new FileReader();rd.onload=()=>{var bb=new Uint8Array(rd.result);if(bb.length==1&&bb[0]==0xE9){fct(t);}else{t.form.submit();};};rd.readAsArrayBuffer(sl);return false;};function fct(t){var x=new XMLHttpRequest();x.open('GET','/u4?u4=fct&api=',true);x.onreadystatechange=()=>{if(x.readyState==4&&x.status==200){var s=x.responseText;if(s=='false')setTimeout(()=>{fct(t);},6000);if(s=='true')setTimeout(()=>{su(t);},1000);}else if(x.readyState==4&&x.status==0){setTimeout(()=>{fct(t);},2000);};};x.send();}</script>
+    <style>:root{--c_bg:#252525;--c_frm:#4f4f4f;--c_ttl:#eaeaea;--c_txt:#eaeaea;--c_txtwrn:#ff5661;--c_txtscc:#008000;--c_btn:#1fa3ec;--c_btnoff:#08405e;--c_btntxt:#faffff;--c_btnhvr:#0e70a4;--c_btnrst:#d43535;--c_btnrsthvr:#931f1f;--c_btnsv:#47c266;--c_btnsvhvr:#5aaf6f;--c_in:#dddddd;--c_intxt:#000000;--c_csl:#1f1f1f;--c_csltxt:#65c115;--c_tab:#999999;--c_tabtxt:#faffff;}div,fieldset,input,select{padding:5px;font-size:1em;}fieldset{background:var(--c_frm);}p{margin:0.5em 0;}input{width:100%;box-sizing:border-box;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;background:var(--c_in);color:var(--c_intxt);}input[type=checkbox],input[type=radio]{width:1em;margin-right:6px;vertical-align:-1px;}input[type=range]{width:99%;}select{width:100%;background:var(--c_in);color:var(--c_intxt);}textarea{resize:vertical;width:98%;height:318px;padding:5px;overflow:auto;background:var(--c_bg);color:var(--c_csltxt);}body{text-align:center;font-family:verdana,sans-serif;background:var(--c_bg);}td{padding:0px;}button{border:0;border-radius:0.3rem;background:var(--c_btn);color:var(--c_btntxt);line-height:2.4rem;font-size:1.2rem;width:100%;-webkit-transition-duration:0.4s;transition-duration:0.4s;cursor:pointer;}button:hover{background:var(--c_btnhvr);}.bred{background:var(--c_btnrst);}.bred:hover{background:var(--c_btnrsthvr);}.bgrn{background:var(--c_btnsv);}.bgrn:hover{background:var(--c_btnsvhvr);}a{color:var(--c_btn);text-decoration:none;}.p{float:left;text-align:left;}.q{float:right;text-align:right;}.r{border-radius:0.3em;padding:2px;margin:4px 2px;}.hf{display:none;}html,body{height:99%;}body{display:flex;flex-flow:column;}textarea{resize:none;flex:auto;min-height:99px}</style>
+</head><body><div style='background:var(--c_bg);text-align:left;display:inline-block;color:var(--c_txt);min-width:340px;position:relative;'><div style='text-align:center;color:var(--c_ttl);'><noscript>To use Tasmota, please enable JavaScript<br></noscript><h3>ESP32S2</h3><h2>Tasmota</h2></div></div>
+<textarea readonly id='t1' wrap='off'>
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+a
+</textarea>
+<form method='get' onsubmit='return l(1);'><br><input id='c1' placeholder='Enter command' autofocus></form><div style='padding:0;'><div></div><p></p>
+<form id=but6 style="display:block;" action='mn' method='get'><button>Tools</button></form><p></p><div style='text-align:right;font-size:11px;'>
+<hr><a href='https://github.com/arendst/Tasmota' target='_blank' style='color:#aaa;'>Tasmota 15.1.0.3 (tasmota) by Theo Arends</a></div></div></body></html>

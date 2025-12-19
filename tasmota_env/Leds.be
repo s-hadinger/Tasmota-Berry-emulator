@@ -16,12 +16,22 @@ class Leds
   # typ:int (optional) = Type of LED, defaults to WS2812 RGB
   # rmt:int (optional) = RMT hardware channel to use, leave default unless you have a good reason 
   def init(leds, gpio_phy, typ, rmt)   # rmt is optional
-    self.gamma = true     # gamma is enabled by default, it should be disabled explicitly if needed
-    self.leds = int(leds)
-    self.bri = 127
+    self.gamma = false    # force no gamma for __JS__
+    
+    # In browser mode, get strip size from JavaScript if not explicitly provided
+    if leds == nil && global.contains('__JS__')
+      import js
+      var js_size = int(js.get_strip_size())
+      if js_size > 0
+        leds = js_size
+      end
+    end
+    
+    self.leds = (leds != nil) ? int(leds) : 30
+    self.bri = 255        # force 255 for __JS__
 
     # fake buffer
-    self._buf = bytes(leds).resize(leds * 3)
+    self._buf = bytes(self.leds).resize(self.leds * 3)
     self._typ = typ
     # if no GPIO, abort
     # if gpio_phy == nil
@@ -42,12 +52,23 @@ class Leds
   end
 
   # set bri (0..255)
+  # set bri (0..511)
   def set_bri(bri)
     if (bri < 0)    bri = 0   end
-    if (bri > 255)  bri = 255 end
+    if (bri > 511)  bri = 511 end
     self.bri = bri
   end
   def get_bri()
+    # If running in browser, get brightness from JavaScript UI
+    # JavaScript brightness is 0-200 where 100 = normal (255 in Berry)
+    # We scale: 0 -> 0, 100 -> 255, 200 -> 510 (allows overexpose)
+    # Note: we map to 0-510 (not 0-511) so that 100 maps exactly to 255
+    if global.contains('__JS__')
+      import js
+      var js_bri = int(js.get_brightness())
+      # Scale: js_bri 0-200 maps to 0-510 so that 100 -> 255 exactly
+      return tasmota.scale_uint(js_bri, 0, 200, 0, 510)
+    end
     return self.bri
   end
 
@@ -80,6 +101,12 @@ class Leds
   def begin()
   end
   def show()
+    # Display frame buffer to JavaScript (browser only)
+    # This sends the LED strip pixel data to JavaScript for rendering
+    if global.contains('__JS__')
+      import js
+      js.frame_buffer_display(self._buf.tohex())
+    end
   end
   def can_show()
     return true
@@ -89,6 +116,19 @@ class Leds
   end
   def dirty()
   end
+
+  # push_pixels
+  #
+  # Pushes a bytes() buffer of 0xAARRGGBB colors, without bri nor gamma correction
+  # 
+  def push_pixels_buffer_argb(pixels)
+    var i = 0
+    while i < self.pixel_count()
+      self.set_pixel_color(i, pixels.get(i * 4, 4))
+      i += 1
+    end
+  end
+
   def pixels_buffer(old_buf)
     return self._buf
   end
@@ -96,14 +136,25 @@ class Leds
     return self.call_native(7)
   end
   def pixel_count()
+    # If running in browser, get strip size from JavaScript
+    if global.contains('__JS__')
+      import js
+      var js_size = int(js.get_strip_size())
+      if js_size > 0
+        return js_size
+      end
+    end
     return self.leds
     # return self.call_native(8)
+  end
+  def length()
+    return self.pixel_count()
   end
   def pixel_offset()
     return 0
   end
   def clear_to(col, bri)
-    if (bri == nil)   bri = self.bri    end
+    if (bri == nil)   bri = self.get_bri()    end
     var rgb = self.to_gamma(col, bri)
     var buf = self._buf
     var r = (rgb >> 16) & 0xFF
@@ -118,11 +169,23 @@ class Leds
     end
   end
   def set_pixel_color(idx, col, bri)
-    if (bri == nil)   bri = self.bri    end
-    self.call_native(10, idx, self.to_gamma(col, bri))
+    if (bri == nil)   bri = self.get_bri()    end
+    var rgb = self.to_gamma(col, bri)
+    var buf = self._buf
+    var r = (rgb >> 16) & 0xFF
+    var g = (rgb >>  8) & 0xFF
+    var b = (rgb      ) & 0xFF
+    buf[idx * 3 + 0] = r
+    buf[idx * 3 + 1] = g
+    buf[idx * 3 + 2] = b
+    #self.call_native(10, idx, self.to_gamma(col, bri))
   end
   def get_pixel_color(idx)
-    return self.call_native(11, idx)
+    var r = self._buf[idx * 3 + 0]
+    var g = self._buf[idx * 3 + 1]
+    var b = self._buf[idx * 3 + 2]
+    return (r << 16) | (g << 8) | b
+    # return self.call_native(11, idx)
   end
 
   # apply gamma and bri
@@ -352,10 +415,23 @@ class Leds
     var g = (color_a >>  8) & 0xFF
     var b = (color_a      ) & 0xFF
 
-    if (bri255 < 255)                # apply bri
+    # Apply brightness scaling
+    # bri255 0-255: scale down (0=off, 255=full)
+    # bri255 256-510: scale up (overexpose, capped at 255 per channel)
+    if (bri255 < 255)
+      # Scale down
       r = tasmota.scale_uint(bri255, 0, 255, 0, r)
       g = tasmota.scale_uint(bri255, 0, 255, 0, g)
       b = tasmota.scale_uint(bri255, 0, 255, 0, b)
+    elif (bri255 > 255)
+      # Scale up (overexpose) - bri255 256-510 maps to 1.0x-2.0x multiplier
+      r = tasmota.scale_uint(bri255, 255, 510, r, r * 2)
+      g = tasmota.scale_uint(bri255, 255, 510, g, g * 2)
+      b = tasmota.scale_uint(bri255, 255, 510, b, b * 2)
+      # Cap at 255
+      if (r > 255)  r = 255  end
+      if (g > 255)  g = 255  end
+      if (b > 255)  b = 255  end
     end
 
     if gamma
@@ -367,6 +443,7 @@ class Leds
     var rgb = (r << 16) | (g << 8) | b
     return rgb
   end
+
   
 end
 

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DSL Transpiler Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4ec9b0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #252526;
+            border-left: 3px solid #007acc;
+        }
+        .test-title {
+            color: #4ec9b0;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .test-input {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            min-height: 80px;
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+        .test-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            min-height: 80px;
+            font-family: monospace;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            color: #4ec9b0;
+        }
+        .error {
+            color: #f48771;
+        }
+        .warning {
+            color: #dcdcaa;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px 5px 5px 0;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.ready {
+            background: #1e3a1f;
+            color: #4ec9b0;
+        }
+        .status.loading {
+            background: #3a3a1e;
+            color: #dcdcaa;
+        }
+        .status.success {
+            background: #1e3a1f;
+            color: #4ec9b0;
+        }
+        .status.error {
+            background: #3a1e1e;
+            color: #f48771;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DSL Transpiler Test Suite</h1>
+        
+        <div id="status" class="status ready">
+            Status: Initializing...
+        </div>
+        
+        <!-- Test 1: Simple Solid Animation -->
+        <div class="test-section">
+            <div class="test-title">Test 1: Simple Solid Animation</div>
+            <textarea class="test-input" id="test1-input"># Simple animation example
+animation back = solid(
+    color = red
+)
+run back</textarea>
+            <button onclick="runTest(1)">Run Test 1</button>
+            <div class="test-output" id="test1-output">Output will appear here...</div>
+        </div>
+        
+        <!-- Test 2: Pulse Animation -->
+        <div class="test-section">
+            <div class="test-title">Test 2: Pulse Animation</div>
+            <textarea class="test-input" id="test2-input">animation pulse_anim = breathe_animation(
+    base_color = blue
+    period = 2000
+)
+run pulse_anim</textarea>
+            <button onclick="runTest(2)">Run Test 2</button>
+            <div class="test-output" id="test2-output">Output will appear here...</div>
+        </div>
+        
+        <!-- Test 3: Rainbow Animation -->
+        <div class="test-section">
+            <div class="test-title">Test 3: Rainbow Animation with string</div>
+            <textarea class="test-input" id="test3-input">animation rainbow_anim = wave_animation(
+    color = red
+)
+log("foobar")
+run rainbow_anim</textarea>
+            <button onclick="runTest(3)">Run Test 3</button>
+            <div class="test-output" id="test3-output">Output will appear here...</div>
+        </div>
+        
+        <!-- Test 4: Invalid DSL (should fail gracefully) -->
+        <div class="test-section">
+            <div class="test-title">Test 4: Invalid DSL (Error Handling)</div>
+            <textarea class="test-input" id="test4-input">animation invalid {
+    this is not valid dsl syntax
+}</textarea>
+            <button onclick="runTest(4)">Run Test 4</button>
+            <div class="test-output" id="test4-output">Output will appear here...</div>
+        </div>
+        
+        <div class="test-section">
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="clearAllOutputs()">Clear All Outputs</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Required by Berry's print() function
+        window.writeOutputText = function(text) {
+            console.log('[Berry Output]', text);
+        };
+        window.waitLineText = function() {
+            return Promise.resolve('');
+        };
+    </script>
+    
+    <!-- Virtual filesystem and Berry modules must load before berry.js -->
+    <script src="virtual-fs.js"></script>
+    <script src="berry-modules.js"></script>
+    <script src="berry.js"></script>
+    <script src="berry-vm.js"></script>
+    <script src="dsl-transpiler.js"></script>
+    
+    <script>
+        /**
+         * Update status display
+         */
+        function updateStatus(message, type = 'ready') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = 'Status: ' + message;
+            statusEl.className = 'status ' + type;
+        }
+        
+        /**
+         * Run a single test
+         */
+        async function runTest(testNum) {
+            const inputEl = document.getElementById('test' + testNum + '-input');
+            const outputEl = document.getElementById('test' + testNum + '-output');
+            
+            if (!inputEl || !outputEl) {
+                console.error('Test elements not found');
+                return;
+            }
+            
+            const dslCode = inputEl.value;
+            outputEl.textContent = 'Running test ' + testNum + '...';
+            
+            try {
+                // Ensure transpiler is ready
+                if (!window.dslTranspiler) {
+                    outputEl.innerHTML = '<span class="error">ERROR: DSL Transpiler not loaded</span>';
+                    return;
+                }
+                
+                // Wait for transpiler to be ready
+                await window.dslTranspiler.waitReady();
+                
+                // Load transpiler if not already loaded
+                if (!window.dslTranspiler.isLoaded()) {
+                    const loadResult = await window.dslTranspiler.load();
+                    if (!loadResult.success) {
+                        outputEl.innerHTML = '<span class="error">ERROR: Failed to load transpiler: ' + (loadResult.error || 'unknown') + '</span>';
+                        return;
+                    }
+                }
+                
+                // Transpile the DSL code
+                const result = await window.dslTranspiler.transpile(dslCode);
+                
+                if (result.success) {
+                    // Clear and rebuild with proper text handling
+                    outputEl.innerHTML = '';
+                    
+                    const successMsg = document.createElement('span');
+                    successMsg.className = 'success';
+                    successMsg.textContent = '✓ Transpilation successful';
+                    outputEl.appendChild(successMsg);
+                    
+                    outputEl.appendChild(document.createTextNode('\n\n'));
+                    
+                    const codeLabel = document.createElement('span');
+                    codeLabel.className = 'success';
+                    codeLabel.textContent = 'Generated Berry code:';
+                    outputEl.appendChild(codeLabel);
+                    
+                    outputEl.appendChild(document.createTextNode('\n' + result.berryCode));
+                } else {
+                    outputEl.innerHTML = '<span class="error">✗ Transpilation failed</span>\n' +
+                        '<span class="error">Error: ' + (result.error || 'unknown error') + '</span>';
+                }
+            } catch (error) {
+                outputEl.innerHTML = '<span class="error">✗ Test error: ' + error.message + '</span>';
+                console.error('Test error:', error);
+            }
+        }
+        
+        /**
+         * Run all tests
+         */
+        async function runAllTests() {
+            updateStatus('Running all tests...', 'loading');
+            
+            for (let i = 1; i <= 4; i++) {
+                await runTest(i);
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            updateStatus('All tests completed', 'success');
+        }
+        
+        /**
+         * Clear all outputs
+         */
+        function clearAllOutputs() {
+            for (let i = 1; i <= 4; i++) {
+                const outputEl = document.getElementById('test' + i + '-output');
+                if (outputEl) {
+                    outputEl.textContent = 'Output will appear here...';
+                }
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', async function() {
+            try {
+                // Wait for Berry WASM module to be ready
+                updateStatus('Waiting for Berry WASM module...', 'loading');
+                
+                let attempts = 0;
+                while (typeof Module === 'undefined' || !Module.calledRun) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                    if (attempts > 100) {
+                        throw new Error('Timeout waiting for Berry WASM module');
+                    }
+                }
+                
+                console.log('[Test] Berry WASM module loaded');
+                
+                // Wait for DSL transpiler to be ready
+                if (window.dslTranspiler) {
+                    console.log('[Test] DSL Transpiler found, waiting for ready...');
+                    await window.dslTranspiler.waitReady();
+                    console.log('[Test] DSL Transpiler ready');
+                    
+                    // Try to load the transpiler
+                    console.log('[Test] Loading DSL transpiler modules...');
+                    const loadResult = await window.dslTranspiler.load();
+                    if (loadResult.success) {
+                        console.log('[Test] DSL transpiler modules loaded successfully');
+                        updateStatus('Ready - DSL Transpiler loaded and ready', 'success');
+                    } else {
+                        console.error('[Test] Failed to load DSL transpiler:', loadResult.error);
+                        updateStatus('ERROR: Failed to load DSL transpiler: ' + (loadResult.error || 'unknown'), 'error');
+                    }
+                } else {
+                    updateStatus('ERROR: DSL Transpiler not available', 'error');
+                    console.error('[Test] DSL Transpiler not found in window');
+                }
+            } catch (error) {
+                updateStatus('ERROR: ' + error.message, 'error');
+                console.error('Initialization error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

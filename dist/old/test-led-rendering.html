@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LED Rendering Test - Berry Simulator</title>
+    <style>
+        body {
+            background-color: #252525;
+            color: #d0d0d0;
+            font-family: verdana, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #4f4f4f;
+            border-radius: 5px;
+        }
+        h1, h2, h3 {
+            color: #1fa3ec;
+        }
+        canvas {
+            border: 1px solid #666;
+            display: block;
+            margin: 10px 0;
+            background-color: #1a1a1a;
+        }
+        button {
+            background-color: #1fa3ec;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8bd9;
+        }
+        button.success {
+            background-color: #4CAF50;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .status.success {
+            background-color: #1b5e20;
+            color: #a5d6a7;
+        }
+        .status.error {
+            background-color: #b71c1c;
+            color: #ef9a9a;
+        }
+        .status.info {
+            background-color: #0d47a1;
+            color: #90caf9;
+        }
+        #log {
+            background-color: #1a1a1a;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .test-result {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        .test-result.pass {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .test-result.fail {
+            background-color: #f44336;
+            color: white;
+        }
+        .strip-container {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #3a3a3a;
+            border-radius: 5px;
+        }
+        .strip-label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+        .color-swatch {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #666;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #555;
+        }
+        th {
+            background-color: #3a3a3a;
+        }
+    </style>
+</head>
+<body>
+    <h1>LED Rendering Test Suite</h1>
+    <p>Comprehensive tests for Berry LEDStripSimulator with JavaScript renderer.</p>
+    <p><strong>Requirements:</strong> 5.2 (Berry LEDStripSimulator class), 5.1 (LEDStripRenderer JavaScript class)</p>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearAllCanvases()">Clear All</button>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="overall-status" class="status info">Click "Run All Tests" to start</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 1: 30 LED Strip</h2>
+        <p>Standard strip length for small projects</p>
+        <div class="strip-container">
+            <div class="strip-label">30 LEDs - Horizontal</div>
+            <canvas id="canvas-30"></canvas>
+        </div>
+        <button onclick="test30LEDs()">Test 30 LEDs</button>
+        <span id="result-30"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: 60 LED Strip</h2>
+        <p>Medium strip length (1 meter at 60 LEDs/m)</p>
+        <div class="strip-container">
+            <div class="strip-label">60 LEDs - Horizontal</div>
+            <canvas id="canvas-60"></canvas>
+        </div>
+        <button onclick="test60LEDs()">Test 60 LEDs</button>
+        <span id="result-60"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: 300 LED Strip</h2>
+        <p>Large strip (5 meters at 60 LEDs/m) - tests performance</p>
+        <div class="strip-container">
+            <div class="strip-label">300 LEDs - Horizontal (smaller pixel size)</div>
+            <canvas id="canvas-300"></canvas>
+        </div>
+        <button onclick="test300LEDs()">Test 300 LEDs</button>
+        <span id="result-300"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Color Accuracy</h2>
+        <p>Verify specific colors render correctly</p>
+        <div class="strip-container">
+            <div class="strip-label">Color Test Strip (10 LEDs)</div>
+            <canvas id="canvas-colors"></canvas>
+        </div>
+        <table>
+            <tr>
+                <th>Position</th>
+                <th>Expected Color</th>
+                <th>ARGB Value</th>
+                <th>Result</th>
+            </tr>
+            <tr>
+                <td>0</td>
+                <td><span class="color-swatch" style="background-color: #FF0000;"></span>Red</td>
+                <td>0xFFFF0000</td>
+                <td id="color-result-0">-</td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td><span class="color-swatch" style="background-color: #00FF00;"></span>Green</td>
+                <td>0xFF00FF00</td>
+                <td id="color-result-1">-</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><span class="color-swatch" style="background-color: #0000FF;"></span>Blue</td>
+                <td>0xFF0000FF</td>
+                <td id="color-result-2">-</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><span class="color-swatch" style="background-color: #FFFF00;"></span>Yellow</td>
+                <td>0xFFFFFF00</td>
+                <td id="color-result-3">-</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><span class="color-swatch" style="background-color: #FF00FF;"></span>Magenta</td>
+                <td>0xFFFF00FF</td>
+                <td id="color-result-4">-</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td><span class="color-swatch" style="background-color: #00FFFF;"></span>Cyan</td>
+                <td>0xFF00FFFF</td>
+                <td id="color-result-5">-</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td><span class="color-swatch" style="background-color: #FFFFFF;"></span>White</td>
+                <td>0xFFFFFFFF</td>
+                <td id="color-result-6">-</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td><span class="color-swatch" style="background-color: #000000;"></span>Black</td>
+                <td>0xFF000000</td>
+                <td id="color-result-7">-</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td><span class="color-swatch" style="background-color: #FF8040;"></span>Orange</td>
+                <td>0xFFFF8040</td>
+                <td id="color-result-8">-</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td><span class="color-swatch" style="background-color: #8040FF;"></span>Purple</td>
+                <td>0xFF8040FF</td>
+                <td id="color-result-9">-</td>
+            </tr>
+        </table>
+        <button onclick="testColorAccuracy()">Test Colors</button>
+        <span id="result-colors"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 5: Hex String Parsing</h2>
+        <p>Verify hex string format is correctly parsed</p>
+        <div class="strip-container">
+            <div class="strip-label">Hex Parse Test (5 LEDs)</div>
+            <canvas id="canvas-hex"></canvas>
+        </div>
+        <button onclick="testHexParsing()">Test Hex Parsing</button>
+        <span id="result-hex"></span>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="renderer.js"></script>
+    <script>
+        // Logging utilities
+        const logDiv = document.getElementById('log');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function log(msg, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f00' : type === 'success' ? '#0f0' : '#aaa';
+            logDiv.innerHTML += `<span style="color:${color}">[${timestamp}] ${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            originalLog(msg);
+        }
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+        
+        // Test result helpers
+        function setResult(id, passed, message) {
+            const el = document.getElementById(id);
+            el.innerHTML = `<span class="test-result ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}: ${message}</span>`;
+            return passed;
+        }
+        
+        function setOverallStatus(passed, message) {
+            const el = document.getElementById('overall-status');
+            el.className = `status ${passed ? 'success' : 'error'}`;
+            el.textContent = message;
+        }
+        
+        // Renderers for each test
+        let renderer30, renderer60, renderer300, rendererColors, rendererHex;
+        
+        // Initialize all renderers
+        function initRenderers() {
+            renderer30 = new LEDStripRenderer('canvas-30', 30, 1, { pixelSize: 10, ledSpacing: 2 });
+            renderer60 = new LEDStripRenderer('canvas-60', 60, 1, { pixelSize: 8, ledSpacing: 1 });
+            renderer300 = new LEDStripRenderer('canvas-300', 300, 1, { pixelSize: 3, ledSpacing: 1 });
+            rendererColors = new LEDStripRenderer('canvas-colors', 10, 1, { pixelSize: 20, ledSpacing: 3 });
+            rendererHex = new LEDStripRenderer('canvas-hex', 5, 1, { pixelSize: 20, ledSpacing: 3 });
+            log('All renderers initialized');
+        }
+        
+        // Clear all canvases
+        function clearAllCanvases() {
+            if (renderer30) renderer30.clear();
+            if (renderer60) renderer60.clear();
+            if (renderer300) renderer300.clear();
+            if (rendererColors) rendererColors.clear();
+            if (rendererHex) rendererHex.clear();
+            log('All canvases cleared');
+        }
+        
+        // Simulate Berry LEDStripSimulator behavior in JavaScript
+        // This mimics what the Berry class does
+        class MockLEDStripSimulator {
+            constructor(width, height = 1) {
+                this.width = width;
+                this.height = height;
+                this.pixel_count = width * height;
+                this.frame_buffer = new Uint8Array(this.pixel_count * 4);
+                this.clear();
+            }
+            
+            clear(color = 0xFF000000) {
+                for (let i = 0; i < this.pixel_count; i++) {
+                    this._write_pixel(i, color);
+                }
+            }
+            
+            set_pixel(index, color) {
+                if (index < 0 || index >= this.pixel_count) return;
+                this._write_pixel(index, color);
+            }
+            
+            get_pixel(index) {
+                if (index < 0 || index >= this.pixel_count) return 0;
+                return this._read_pixel(index);
+            }
+            
+            _write_pixel(index, color) {
+                const offset = index * 4;
+                this.frame_buffer[offset] = (color >>> 24) & 0xFF;     // Alpha
+                this.frame_buffer[offset + 1] = (color >> 16) & 0xFF;  // Red
+                this.frame_buffer[offset + 2] = (color >> 8) & 0xFF;   // Green
+                this.frame_buffer[offset + 3] = color & 0xFF;          // Blue
+            }
+            
+            _read_pixel(index) {
+                const offset = index * 4;
+                const a = this.frame_buffer[offset];
+                const r = this.frame_buffer[offset + 1];
+                const g = this.frame_buffer[offset + 2];
+                const b = this.frame_buffer[offset + 3];
+                return ((a << 24) | (r << 16) | (g << 8) | b) >>> 0;
+            }
+            
+            get_hex() {
+                let hex = '';
+                for (let i = 0; i < this.frame_buffer.length; i++) {
+                    hex += this.frame_buffer[i].toString(16).padStart(2, '0').toUpperCase();
+                }
+                return hex;
+            }
+            
+            fill(color) {
+                for (let i = 0; i < this.pixel_count; i++) {
+                    this._write_pixel(i, color);
+                }
+            }
+            
+            size() {
+                return this.pixel_count;
+            }
+        }
+        
+        // Helper to create rainbow colors
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return {
+                r: Math.round(f(0) * 255),
+                g: Math.round(f(8) * 255),
+                b: Math.round(f(4) * 255)
+            };
+        }
+        
+        function rgbToArgb(r, g, b, a = 255) {
+            return ((a << 24) | (r << 16) | (g << 8) | b) >>> 0;
+        }
+        
+        // Test 1: 30 LED Strip
+        function test30LEDs() {
+            log('Testing 30 LED strip...');
+            try {
+                const strip = new MockLEDStripSimulator(30);
+                
+                // Create rainbow pattern
+                for (let i = 0; i < 30; i++) {
+                    const hue = (i / 30) * 360;
+                    const rgb = hslToRgb(hue, 100, 50);
+                    const color = rgbToArgb(rgb.r, rgb.g, rgb.b);
+                    strip.set_pixel(i, color);
+                }
+                
+                // Render to canvas
+                const hexString = strip.get_hex();
+                renderer30.renderFromHex(hexString);
+                
+                // Verify
+                const passed = strip.size() === 30 && hexString.length === 30 * 8;
+                log(`30 LED test: size=${strip.size()}, hex length=${hexString.length}`, passed ? 'success' : 'error');
+                return setResult('result-30', passed, `${strip.size()} LEDs rendered`);
+            } catch (e) {
+                log(`30 LED test error: ${e.message}`, 'error');
+                return setResult('result-30', false, e.message);
+            }
+        }
+        
+        // Test 2: 60 LED Strip
+        function test60LEDs() {
+            log('Testing 60 LED strip...');
+            try {
+                const strip = new MockLEDStripSimulator(60);
+                
+                // Create gradient pattern (red to blue)
+                for (let i = 0; i < 60; i++) {
+                    const t = i / 59;
+                    const r = Math.round(255 * (1 - t));
+                    const b = Math.round(255 * t);
+                    const color = rgbToArgb(r, 0, b);
+                    strip.set_pixel(i, color);
+                }
+                
+                // Render to canvas
+                const hexString = strip.get_hex();
+                renderer60.renderFromHex(hexString);
+                
+                // Verify
+                const passed = strip.size() === 60 && hexString.length === 60 * 8;
+                log(`60 LED test: size=${strip.size()}, hex length=${hexString.length}`, passed ? 'success' : 'error');
+                return setResult('result-60', passed, `${strip.size()} LEDs rendered`);
+            } catch (e) {
+                log(`60 LED test error: ${e.message}`, 'error');
+                return setResult('result-60', false, e.message);
+            }
+        }
+        
+        // Test 3: 300 LED Strip
+        function test300LEDs() {
+            log('Testing 300 LED strip...');
+            try {
+                const startTime = performance.now();
+                const strip = new MockLEDStripSimulator(300);
+                
+                // Create moving rainbow pattern
+                for (let i = 0; i < 300; i++) {
+                    const hue = (i / 300) * 360 * 3; // 3 full rainbows
+                    const rgb = hslToRgb(hue % 360, 100, 50);
+                    const color = rgbToArgb(rgb.r, rgb.g, rgb.b);
+                    strip.set_pixel(i, color);
+                }
+                
+                // Render to canvas
+                const hexString = strip.get_hex();
+                renderer300.renderFromHex(hexString);
+                
+                const elapsed = performance.now() - startTime;
+                
+                // Verify
+                const passed = strip.size() === 300 && hexString.length === 300 * 8;
+                log(`300 LED test: size=${strip.size()}, hex length=${hexString.length}, time=${elapsed.toFixed(2)}ms`, passed ? 'success' : 'error');
+                return setResult('result-300', passed, `${strip.size()} LEDs in ${elapsed.toFixed(1)}ms`);
+            } catch (e) {
+                log(`300 LED test error: ${e.message}`, 'error');
+                return setResult('result-300', false, e.message);
+            }
+        }
+        
+        // Test 4: Color Accuracy
+        function testColorAccuracy() {
+            log('Testing color accuracy...');
+            try {
+                const strip = new MockLEDStripSimulator(10);
+                
+                // Define test colors
+                const testColors = [
+                    { name: 'Red',     argb: 0xFFFF0000 },
+                    { name: 'Green',   argb: 0xFF00FF00 },
+                    { name: 'Blue',    argb: 0xFF0000FF },
+                    { name: 'Yellow',  argb: 0xFFFFFF00 },
+                    { name: 'Magenta', argb: 0xFFFF00FF },
+                    { name: 'Cyan',    argb: 0xFF00FFFF },
+                    { name: 'White',   argb: 0xFFFFFFFF },
+                    { name: 'Black',   argb: 0xFF000000 },
+                    { name: 'Orange',  argb: 0xFFFF8040 },
+                    { name: 'Purple',  argb: 0xFF8040FF }
+                ];
+                
+                // Set pixels
+                let allPassed = true;
+                for (let i = 0; i < testColors.length; i++) {
+                    strip.set_pixel(i, testColors[i].argb);
+                    
+                    // Verify pixel was set correctly
+                    const readBack = strip.get_pixel(i);
+                    const passed = readBack === testColors[i].argb;
+                    
+                    document.getElementById(`color-result-${i}`).innerHTML = 
+                        `<span class="test-result ${passed ? 'pass' : 'fail'}">${passed ? 'OK' : 'FAIL'}</span>`;
+                    
+                    if (!passed) {
+                        log(`Color ${testColors[i].name}: expected 0x${testColors[i].argb.toString(16).toUpperCase()}, got 0x${readBack.toString(16).toUpperCase()}`, 'error');
+                        allPassed = false;
+                    }
+                }
+                
+                // Render to canvas
+                const hexString = strip.get_hex();
+                rendererColors.renderFromHex(hexString);
+                
+                log(`Color accuracy test: ${allPassed ? 'all colors correct' : 'some colors failed'}`, allPassed ? 'success' : 'error');
+                return setResult('result-colors', allPassed, allPassed ? 'All 10 colors correct' : 'Some colors failed');
+            } catch (e) {
+                log(`Color accuracy test error: ${e.message}`, 'error');
+                return setResult('result-colors', false, e.message);
+            }
+        }
+        
+        // Test 5: Hex String Parsing
+        function testHexParsing() {
+            log('Testing hex string parsing...');
+            try {
+                // Create a known hex string manually
+                // 5 pixels: Red, Green, Blue, White, Black
+                const knownHex = 'FFFF0000' + 'FF00FF00' + 'FF0000FF' + 'FFFFFFFF' + 'FF000000';
+                
+                // Render directly
+                rendererHex.renderFromHex(knownHex);
+                
+                // Also test via MockLEDStripSimulator
+                const strip = new MockLEDStripSimulator(5);
+                strip.set_pixel(0, 0xFFFF0000);
+                strip.set_pixel(1, 0xFF00FF00);
+                strip.set_pixel(2, 0xFF0000FF);
+                strip.set_pixel(3, 0xFFFFFFFF);
+                strip.set_pixel(4, 0xFF000000);
+                
+                const generatedHex = strip.get_hex();
+                const passed = generatedHex === knownHex;
+                
+                log(`Hex parsing test: expected=${knownHex}`, 'log');
+                log(`Hex parsing test: got=${generatedHex}`, passed ? 'success' : 'error');
+                
+                return setResult('result-hex', passed, passed ? 'Hex format correct' : 'Hex format mismatch');
+            } catch (e) {
+                log(`Hex parsing test error: ${e.message}`, 'error');
+                return setResult('result-hex', false, e.message);
+            }
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            log('=== Running All Tests ===');
+            clearAllCanvases();
+            
+            const results = [];
+            results.push(test30LEDs());
+            results.push(test60LEDs());
+            results.push(test300LEDs());
+            results.push(testColorAccuracy());
+            results.push(testHexParsing());
+            
+            const passed = results.filter(r => r).length;
+            const total = results.length;
+            const allPassed = passed === total;
+            
+            log(`=== Test Results: ${passed}/${total} passed ===`, allPassed ? 'success' : 'error');
+            setOverallStatus(allPassed, `${passed}/${total} tests passed`);
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            log('LED Rendering Test Suite loaded');
+            initRenderers();
+            log('Ready to run tests');
+        };
+    </script>
+</body>
+</html>

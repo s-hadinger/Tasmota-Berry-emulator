@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Berry LEDStripSimulator Test</title>
+    <style>
+        body {
+            background-color: #252525;
+            color: #d0d0d0;
+            font-family: verdana, sans-serif;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #4f4f4f;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #1fa3ec;
+        }
+        canvas {
+            border: 1px solid #666;
+            display: block;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #1fa3ec;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8bd9;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            color: #0f0;
+            margin: 10px 0;
+        }
+        .error {
+            color: #f00;
+        }
+        .warning {
+            color: #ff0;
+        }
+        #log {
+            background-color: #1a1a1a;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        #berry-code {
+            width: 100%;
+            height: 150px;
+            background-color: #1a1a1a;
+            color: #0f0;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #666;
+            resize: vertical;
+        }
+        .loading {
+            color: #ff0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Berry LEDStripSimulator Test</h1>
+    <p>This page tests the Berry LEDStripSimulator class with the JavaScript renderer.</p>
+    
+    <div class="test-section">
+        <h2>Berry WASM Status</h2>
+        <div id="wasm-status" class="loading">Loading Berry WASM module...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>LED Strip Visualization</h2>
+        <canvas id="led-canvas"></canvas>
+        <div>
+            <button id="btn-init" disabled onclick="initStrip()">Initialize Strip (30 LEDs)</button>
+            <button id="btn-rainbow" disabled onclick="testRainbow()">Rainbow Test</button>
+            <button id="btn-pulse" disabled onclick="testPulse()">Pulse Test</button>
+            <button id="btn-clear" disabled onclick="clearStrip()">Clear</button>
+        </div>
+        <div id="strip-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Run Berry Code</h2>
+        <textarea id="berry-code"># Example: Set some pixels
+strip.set_pixel(0, 0xFFFF0000)  # Red
+strip.set_pixel(1, 0xFF00FF00)  # Green
+strip.set_pixel(2, 0xFF0000FF)  # Blue
+strip.render()</textarea>
+        <br>
+        <button id="btn-run" disabled onclick="runBerryCode()">Run Berry Code</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="log"></div>
+    </div>
+
+    <script src="renderer.js"></script>
+    <script src="berry.js"></script>
+    <script>
+        const logDiv = document.getElementById('log');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function log(msg, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '[ERROR] ' : type === 'warn' ? '[WARN] ' : '';
+            const color = type === 'error' ? '#f00' : type === 'warn' ? '#ff0' : '#0f0';
+            logDiv.innerHTML += `<span style="color:${color}">[${timestamp}] ${prefix}${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            log(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            log(args.join(' '), 'warn');
+        };
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+        
+        function setStatus(id, message, isError = false) {
+            const el = document.getElementById(id);
+            el.textContent = message;
+            el.className = isError ? 'status error' : 'status';
+        }
+        
+        // Berry WASM module reference
+        let berryModule = null;
+        let berryReady = false;
+        
+        // LED Strip Simulator Berry code
+        const ledSimulatorCode = `
+class LEDStripSimulator
+    var frame_buffer
+    var width
+    var height
+    var pixel_count
+    
+    def init(width, height)
+        if height == nil
+            height = 1
+        end
+        self.width = width
+        self.height = height
+        self.pixel_count = width * height
+        self.frame_buffer = bytes()
+        self.frame_buffer.resize(self.pixel_count * 4)
+        self.clear()
+    end
+    
+    def clear(color)
+        if color == nil
+            color = 0xFF000000
+        end
+        for i: 0 .. self.pixel_count - 1
+            self._write_pixel(i, color)
+        end
+    end
+    
+    def set_pixel(index, color)
+        if index < 0 || index >= self.pixel_count
+            return
+        end
+        self._write_pixel(index, color)
+    end
+    
+    def get_pixel(index)
+        if index < 0 || index >= self.pixel_count
+            return 0
+        end
+        return self._read_pixel(index)
+    end
+    
+    def _write_pixel(index, color)
+        var offset = index * 4
+        self.frame_buffer[offset] = (color >> 24) & 0xFF
+        self.frame_buffer[offset + 1] = (color >> 16) & 0xFF
+        self.frame_buffer[offset + 2] = (color >> 8) & 0xFF
+        self.frame_buffer[offset + 3] = color & 0xFF
+    end
+    
+    def _read_pixel(index)
+        var offset = index * 4
+        var a = self.frame_buffer[offset]
+        var r = self.frame_buffer[offset + 1]
+        var g = self.frame_buffer[offset + 2]
+        var b = self.frame_buffer[offset + 3]
+        return (a << 24) | (r << 16) | (g << 8) | b
+    end
+    
+    def render()
+        import js
+        var hex_string = self.frame_buffer.tohex()
+        js.call("renderLEDStrip", hex_string)
+    end
+    
+    def fill(color)
+        for i: 0 .. self.pixel_count - 1
+            self._write_pixel(i, color)
+        end
+    end
+    
+    def size()
+        return self.pixel_count
+    end
+end
+
+def rgb(r, g, b)
+    return 0xFF000000 | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF)
+end
+`;
+        
+        // Wait for Berry WASM to be ready
+        function waitForBerry() {
+            return new Promise((resolve, reject) => {
+                // Check if Module is ready
+                if (typeof Module !== 'undefined' && Module.calledRun) {
+                    resolve();
+                    return;
+                }
+                
+                // Wait for Module to be ready
+                let attempts = 0;
+                const maxAttempts = 100;
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    if (typeof Module !== 'undefined' && Module.calledRun) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        reject(new Error('Timeout waiting for Berry WASM module'));
+                    }
+                }, 100);
+            });
+        }
+        
+        // Initialize Berry and load the LED simulator class
+        async function initBerry() {
+            try {
+                setStatus('wasm-status', 'Waiting for Berry WASM module...', false);
+                await waitForBerry();
+                
+                berryModule = Module;
+                setStatus('wasm-status', 'Berry WASM module loaded! Initializing LED simulator...', false);
+                
+                // The Berry module should have a way to execute code
+                // For now, we'll enable the buttons and let the user test
+                berryReady = true;
+                
+                // Enable buttons
+                document.getElementById('btn-init').disabled = false;
+                document.getElementById('btn-rainbow').disabled = false;
+                document.getElementById('btn-pulse').disabled = false;
+                document.getElementById('btn-clear').disabled = false;
+                document.getElementById('btn-run').disabled = false;
+                
+                setStatus('wasm-status', 'Berry WASM ready! Click "Initialize Strip" to start.', false);
+                console.log('Berry WASM module initialized successfully');
+                
+            } catch (e) {
+                setStatus('wasm-status', 'Failed to load Berry WASM: ' + e.message, true);
+                console.error('Berry initialization failed:', e);
+            }
+        }
+        
+        // Initialize the LED strip
+        function initStrip() {
+            try {
+                // Initialize JavaScript renderer
+                window.initLEDRenderer('led-canvas', 30, 1, {
+                    pixelSize: 12,
+                    ledSpacing: 2
+                });
+                
+                console.log('LED renderer initialized with 30 LEDs');
+                setStatus('strip-status', 'LED strip initialized (30 LEDs)');
+                
+                // Note: In a full implementation, we would also initialize
+                // the Berry LEDStripSimulator class here
+                
+            } catch (e) {
+                setStatus('strip-status', 'Error: ' + e.message, true);
+                console.error('Init error:', e);
+            }
+        }
+        
+        // Test rainbow pattern (JavaScript simulation)
+        function testRainbow() {
+            if (!window.ledRenderer) {
+                setStatus('strip-status', 'Please initialize strip first', true);
+                return;
+            }
+            
+            try {
+                // Generate rainbow hex string
+                let hexString = '';
+                for (let i = 0; i < 30; i++) {
+                    const hue = (i / 30) * 360;
+                    const rgb = hslToRgb(hue, 100, 50);
+                    hexString += 'FF' + 
+                        rgb.r.toString(16).padStart(2, '0').toUpperCase() +
+                        rgb.g.toString(16).padStart(2, '0').toUpperCase() +
+                        rgb.b.toString(16).padStart(2, '0').toUpperCase();
+                }
+                
+                window.renderLEDStrip(hexString);
+                setStatus('strip-status', 'Rainbow pattern displayed');
+                console.log('Rainbow test: rendered 30 LEDs');
+                
+            } catch (e) {
+                setStatus('strip-status', 'Error: ' + e.message, true);
+                console.error('Rainbow test error:', e);
+            }
+        }
+        
+        // Test pulse animation (JavaScript simulation)
+        let pulseInterval = null;
+        function testPulse() {
+            if (!window.ledRenderer) {
+                setStatus('strip-status', 'Please initialize strip first', true);
+                return;
+            }
+            
+            if (pulseInterval) {
+                clearInterval(pulseInterval);
+                pulseInterval = null;
+                setStatus('strip-status', 'Pulse stopped');
+                return;
+            }
+            
+            let brightness = 0;
+            let increasing = true;
+            
+            pulseInterval = setInterval(() => {
+                // Update brightness
+                if (increasing) {
+                    brightness += 5;
+                    if (brightness >= 255) {
+                        brightness = 255;
+                        increasing = false;
+                    }
+                } else {
+                    brightness -= 5;
+                    if (brightness <= 0) {
+                        brightness = 0;
+                        increasing = true;
+                    }
+                }
+                
+                // Generate hex string with current brightness (red)
+                let hexString = '';
+                for (let i = 0; i < 30; i++) {
+                    hexString += 'FF' + 
+                        brightness.toString(16).padStart(2, '0').toUpperCase() +
+                        '0000';
+                }
+                
+                window.renderLEDStrip(hexString);
+            }, 30);
+            
+            setStatus('strip-status', 'Pulse animation running (click again to stop)');
+        }
+        
+        // Clear the strip
+        function clearStrip() {
+            if (!window.ledRenderer) {
+                setStatus('strip-status', 'Please initialize strip first', true);
+                return;
+            }
+            
+            if (pulseInterval) {
+                clearInterval(pulseInterval);
+                pulseInterval = null;
+            }
+            
+            window.ledRenderer.clear();
+            setStatus('strip-status', 'Strip cleared');
+        }
+        
+        // Run Berry code (placeholder - needs Berry execution)
+        function runBerryCode() {
+            const code = document.getElementById('berry-code').value;
+            console.log('Berry code to execute:');
+            console.log(code);
+            setStatus('strip-status', 'Berry code execution requires full WASM integration', false);
+            
+            // Note: In a full implementation, this would call the Berry VM
+            // to execute the code. For now, we just log it.
+        }
+        
+        // HSL to RGB helper
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return {
+                r: Math.round(f(0) * 255),
+                g: Math.round(f(8) * 255),
+                b: Math.round(f(4) * 255)
+            };
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            console.log('Berry LEDStripSimulator Test Page Loaded');
+            initBerry();
+        };
+    </script>
+</body>
+</html>

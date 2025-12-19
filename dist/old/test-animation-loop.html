@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Berry AnimationLoop Test</title>
+    <style>
+        body {
+            background-color: #252525;
+            color: #d0d0d0;
+            font-family: verdana, sans-serif;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #4f4f4f;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            color: #1fa3ec;
+        }
+        canvas {
+            border: 1px solid #666;
+            display: block;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #1fa3ec;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0d8bd9;
+        }
+        button.bgrn {
+            background-color: #30b030;
+        }
+        button.bgrn:hover {
+            background-color: #28a028;
+        }
+        button.bred {
+            background-color: #d03030;
+        }
+        button.bred:hover {
+            background-color: #c02020;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .status {
+            color: #0f0;
+            margin: 10px 0;
+        }
+        .error {
+            color: #f00;
+        }
+        .warning {
+            color: #ff0;
+        }
+        #log {
+            background-color: #1a1a1a;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        .fps-display {
+            font-family: monospace;
+            font-size: 24px;
+            color: #0f0;
+            margin: 10px 0;
+        }
+        .frame-counter {
+            font-family: monospace;
+            font-size: 18px;
+            color: #1fa3ec;
+        }
+    </style>
+</head>
+<body>
+    <h1>Berry AnimationLoop Test</h1>
+    <p>This page tests the AnimationLoop JavaScript class for driving Berry animations.</p>
+    
+    <div class="test-section">
+        <h2>Animation Loop Status</h2>
+        <div class="fps-display">
+            FPS: <span id="fps-display">0.0</span>
+        </div>
+        <div class="frame-counter">
+            Frame Count: <span id="frame-count">0</span>
+        </div>
+        <div id="loop-status" class="status">Stopped</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>LED Strip Animation Demo</h2>
+        <canvas id="led-canvas"></canvas>
+        <div>
+            <button id="btn-start" class="bgrn" onclick="startAnimation()">Start</button>
+            <button id="btn-stop" class="bred" onclick="stopAnimation()">Stop</button>
+            <button onclick="toggleAnimation()">Toggle</button>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Animation Tests</h2>
+        <button onclick="runRainbowCycle()">Rainbow Cycle</button>
+        <button onclick="runPulse()">Pulse</button>
+        <button onclick="runComet()">Comet</button>
+        <button onclick="runSparkle()">Sparkle</button>
+        <div id="anim-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Unit Tests</h2>
+        <button onclick="runUnitTests()">Run All Tests</button>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="test-status" class="status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="renderer.js"></script>
+    <script src="animation-loop.js"></script>
+    <script>
+        const logDiv = document.getElementById('log');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function log(msg, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '[ERROR] ' : type === 'warn' ? '[WARN] ' : '';
+            const color = type === 'error' ? '#f00' : type === 'warn' ? '#ff0' : '#0f0';
+            logDiv.innerHTML += `<span style="color:${color}">[${timestamp}] ${prefix}${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            log(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log(args.join(' '), 'error');
+        };
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+        
+        // Animation state
+        let animationLoop = null;
+        let frameCount = 0;
+        let currentAnimation = null;
+        let animationStartTime = 0;
+        const LED_COUNT = 30;
+        
+        // Initialize on page load
+        window.onload = function() {
+            console.log('AnimationLoop Test Page Loaded');
+            
+            // Initialize LED renderer
+            window.initLEDRenderer('led-canvas', LED_COUNT, 1, {
+                pixelSize: 12,
+                ledSpacing: 2
+            });
+            console.log(`LED renderer initialized with ${LED_COUNT} LEDs`);
+            
+            // Create animation loop
+            animationLoop = new AnimationLoop({
+                onFrame: onAnimationFrame,
+                onFPSUpdate: onFPSUpdate,
+                onStart: onAnimationStart,
+                onStop: onAnimationStop
+            });
+            console.log('AnimationLoop created');
+            
+            // Set default animation
+            currentAnimation = rainbowCycleAnimation;
+        };
+        
+        // Animation loop callbacks
+        function onAnimationFrame() {
+            frameCount++;
+            document.getElementById('frame-count').textContent = frameCount;
+            
+            // Call current animation
+            if (currentAnimation) {
+                const elapsed = performance.now() - animationStartTime;
+                currentAnimation(elapsed);
+            }
+        }
+        
+        function onFPSUpdate(fps) {
+            document.getElementById('fps-display').textContent = fps.toFixed(1);
+        }
+        
+        function onAnimationStart() {
+            document.getElementById('loop-status').textContent = 'Running';
+            document.getElementById('loop-status').className = 'status';
+            animationStartTime = performance.now();
+            console.log('Animation started');
+        }
+        
+        function onAnimationStop() {
+            document.getElementById('loop-status').textContent = 'Stopped';
+            document.getElementById('loop-status').className = 'status warning';
+            console.log('Animation stopped');
+        }
+        
+        // Control functions
+        function startAnimation() {
+            if (animationLoop) {
+                animationLoop.start();
+            }
+        }
+        
+        function stopAnimation() {
+            if (animationLoop) {
+                animationLoop.stop();
+            }
+        }
+        
+        function toggleAnimation() {
+            if (animationLoop) {
+                const running = animationLoop.toggle();
+                console.log(`Animation toggled: ${running ? 'running' : 'stopped'}`);
+            }
+        }
+        
+        // Animation implementations
+        function rainbowCycleAnimation(elapsed) {
+            const speed = 0.1;  // Cycles per second
+            const offset = (elapsed * speed) % 360;
+            
+            let hexString = '';
+            for (let i = 0; i < LED_COUNT; i++) {
+                const hue = (offset + (i / LED_COUNT) * 360) % 360;
+                const rgb = hslToRgb(hue, 100, 50);
+                hexString += 'FF' + 
+                    rgb.r.toString(16).padStart(2, '0').toUpperCase() +
+                    rgb.g.toString(16).padStart(2, '0').toUpperCase() +
+                    rgb.b.toString(16).padStart(2, '0').toUpperCase();
+            }
+            window.renderLEDStrip(hexString);
+        }
+        
+        function pulseAnimation(elapsed) {
+            const speed = 2;  // Pulses per second
+            const brightness = Math.floor((Math.sin(elapsed / 1000 * speed * Math.PI * 2) + 1) / 2 * 255);
+            
+            let hexString = '';
+            for (let i = 0; i < LED_COUNT; i++) {
+                hexString += 'FF' + 
+                    brightness.toString(16).padStart(2, '0').toUpperCase() +
+                    '0000';  // Red pulse
+            }
+            window.renderLEDStrip(hexString);
+        }
+        
+        function cometAnimation(elapsed) {
+            const speed = 0.03;  // LEDs per millisecond
+            const tailLength = 8;
+            const position = (elapsed * speed) % (LED_COUNT + tailLength);
+            
+            let hexString = '';
+            for (let i = 0; i < LED_COUNT; i++) {
+                let brightness = 0;
+                const distance = position - i;
+                
+                if (distance >= 0 && distance < tailLength) {
+                    brightness = Math.floor(255 * (1 - distance / tailLength));
+                }
+                
+                hexString += 'FF' + 
+                    '00' +
+                    brightness.toString(16).padStart(2, '0').toUpperCase() +
+                    brightness.toString(16).padStart(2, '0').toUpperCase();  // Cyan comet
+            }
+            window.renderLEDStrip(hexString);
+        }
+        
+        function sparkleAnimation(elapsed) {
+            let hexString = '';
+            for (let i = 0; i < LED_COUNT; i++) {
+                // Random sparkle with 5% chance
+                if (Math.random() < 0.05) {
+                    hexString += 'FFFFFFFF';  // White sparkle
+                } else {
+                    // Dim background
+                    hexString += 'FF101010';
+                }
+            }
+            window.renderLEDStrip(hexString);
+        }
+        
+        // Animation selection
+        function runRainbowCycle() {
+            currentAnimation = rainbowCycleAnimation;
+            document.getElementById('anim-status').textContent = 'Rainbow Cycle';
+            if (!animationLoop.getIsRunning()) {
+                animationLoop.start();
+            }
+        }
+        
+        function runPulse() {
+            currentAnimation = pulseAnimation;
+            document.getElementById('anim-status').textContent = 'Pulse';
+            if (!animationLoop.getIsRunning()) {
+                animationLoop.start();
+            }
+        }
+        
+        function runComet() {
+            currentAnimation = cometAnimation;
+            document.getElementById('anim-status').textContent = 'Comet';
+            if (!animationLoop.getIsRunning()) {
+                animationLoop.start();
+            }
+        }
+        
+        function runSparkle() {
+            currentAnimation = sparkleAnimation;
+            document.getElementById('anim-status').textContent = 'Sparkle';
+            if (!animationLoop.getIsRunning()) {
+                animationLoop.start();
+            }
+        }
+        
+        // HSL to RGB helper
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            };
+            return {
+                r: Math.round(f(0) * 255),
+                g: Math.round(f(8) * 255),
+                b: Math.round(f(4) * 255)
+            };
+        }
+        
+        // Unit tests
+        function runUnitTests() {
+            console.log('=== AnimationLoop Unit Tests ===');
+            let passed = 0;
+            let failed = 0;
+            
+            // Test 1: AnimationLoop creation
+            console.log('\nTest 1: AnimationLoop creation');
+            try {
+                const loop = new AnimationLoop();
+                if (loop && typeof loop.start === 'function' && typeof loop.stop === 'function') {
+                    console.log('  PASSED: AnimationLoop created with start/stop methods');
+                    passed++;
+                } else {
+                    console.error('  FAILED: Missing methods');
+                    failed++;
+                }
+            } catch (e) {
+                console.error('  FAILED:', e.message);
+                failed++;
+            }
+            
+            // Test 2: Initial state is stopped
+            console.log('\nTest 2: Initial state is stopped');
+            try {
+                const loop = new AnimationLoop();
+                if (!loop.getIsRunning()) {
+                    console.log('  PASSED: Initial state is stopped');
+                    passed++;
+                } else {
+                    console.error('  FAILED: Should not be running initially');
+                    failed++;
+                }
+            } catch (e) {
+                console.error('  FAILED:', e.message);
+                failed++;
+            }
+            
+            // Test 3: Start changes state to running
+            console.log('\nTest 3: Start changes state to running');
+            try {
+                const loop = new AnimationLoop();
+                loop.start();
+                if (loop.getIsRunning()) {
+                    console.log('  PASSED: State is running after start()');
+                    passed++;
+                } else {
+                    console.error('  FAILED: Should be running after start()');
+                    failed++;
+                }
+                loop.stop();
+            } catch (e) {
+                console.error('  FAILED:', e.message);
+                failed++;
+            }
+            
+            // Test 4: Stop changes state to stopped
+            console.log('\nTest 4: Stop changes state to stopped');
+            try {
+                const loop = new AnimationLoop();
+                loop.start();
+                loop.stop();
+                if (!loop.getIsRunning()) {
+                    console.log('  PASSED: State is stopped after stop()');
+                    passed++;
+                } else {
+                    console.error('  FAILED: Should be stopped after stop()');
+                    failed++;
+                }
+            } catch (e) {
+                console.error('  FAILED:', e.message);
+                failed++;
+            }
+            
+            // Test 5: Toggle works correctly
+            console.log('\nTest 5: Toggle works correctly');
+            try {
+                const loop = new AnimationLoop();
+                const state1 = loop.toggle();  // Should start
+                const state2 = loop.toggle();  // Should stop
+                if (state1 === true && state2 === false) {
+                    console.log('  PASSED: Toggle works correctly');
+                    passed++;
+                } else {
+                    console.error('  FAILED: Toggle returned wrong states');
+                    failed++;
+                }
+            } catch (e) {
+                console.error('  FAILED:', e.message);
+                failed++;
+            }
+            
+            // Test 6: onFrame callback is called
+            console.log('\nTest 6: onFrame callback is called');
+            try {
+                let callCount = 0;
+                const loop = new AnimationLoop({
+                    onFrame: () => { callCount++; }
+                });
+                loop.start();
+                
+                // Wait for a few frames
+                setTimeout(() => {
+                    loop.stop();
+                    if (callCount > 0) {
+                        console.log(`  PASSED: onFrame called ${callCount} times`);
+                        passed++;
+                    } else {
+                        console.error('  FAILED: onFrame was not called');
+                        failed++;
+                    }
+                    
+                    // Final summary
+                    console.log(`\n=== Test Summary: ${passed} passed, ${failed} failed ===`);
+                    document.getElementById('test-status').textContent = 
+                        `Tests complete: ${passed} passed, ${failed} failed`;
+                    document.getElementById('test-status').className = 
+                        failed > 0 ? 'status error' : 'status';
+                }, 100);
+                
+                return;  // Don't show summary yet
+            } catch (e) {
+                console.error('  FAILED:', e.message);
+                failed++;
+            }
+            
+            // Summary (if we didn't return early)
+            console.log(`\n=== Test Summary: ${passed} passed, ${failed} failed ===`);
+            document.getElementById('test-status').textContent = 
+                `Tests complete: ${passed} passed, ${failed} failed`;
+        }
+        
+        // Test 7: FPSCounter works
+        console.log('\nTest 7: FPSCounter creation');
+        try {
+            const counter = new FPSCounter();
+            if (counter && typeof counter.tick === 'function' && typeof counter.getFPS === 'function') {
+                console.log('  PASSED: FPSCounter created with tick/getFPS methods');
+            } else {
+                console.error('  FAILED: Missing methods');
+            }
+        } catch (e) {
+            console.error('  FAILED:', e.message);
+        }
+    </script>
+</body>
+</html>

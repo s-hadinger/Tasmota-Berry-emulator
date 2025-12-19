@@ -24,12 +24,13 @@ class Leds_frame : bytes
     self.setitem(i, color)
   end
 
-  def fill_pixels(color)
-    var pixels_count = self.size() / 4
-    var idx = 0
-    while idx < pixels_count
-      self.set(idx * 4, color, 4)
-      idx += 1
+  def fill_pixels(color, start_pos, end_pos)
+    if (start_pos == nil)   start_pos = 0     end
+    if (end_pos == nil)     end_pos = self.size() / 4   end
+    while start_pos < end_pos
+      print(f"+ {start_pos=} {end_pos=}")
+      self.set(start_pos * 4, color, 4)
+      start_pos += 1
     end
   end
 

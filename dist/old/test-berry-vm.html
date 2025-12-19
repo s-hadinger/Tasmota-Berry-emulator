@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Berry VM JavaScript API</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 { color: #4CAF50; }
+        h2 { color: #2196F3; margin-top: 30px; }
+        .test-section {
+            background: #2d2d2d;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success { background: #1b5e20; }
+        .error { background: #b71c1c; }
+        .pending { background: #424242; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #45a049; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        #console {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Berry VM JavaScript API Test</h1>
+    
+    <div class="test-section">
+        <h2>Status</h2>
+        <div id="status" class="test-result pending">Waiting for Berry WASM module to load...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Output</h2>
+        <div id="console"></div>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 1: Execute Simple Berry Code</h2>
+        <textarea id="code1">print("Hello from Berry!")
+var x = 10 + 20
+print("Result: " .. str(x))</textarea>
+        <br>
+        <button onclick="runTest1()">Run Test</button>
+        <div id="result1" class="test-result pending">Not run yet</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Define and Call Global Function</h2>
+        <p>First, define a function:</p>
+        <textarea id="code2">def greet(name)
+    return "Hello, " .. name .. "!"
+end</textarea>
+        <br>
+        <button onclick="runTest2Define()">Define Function</button>
+        <button onclick="runTest2Call()">Call greet("World")</button>
+        <div id="result2" class="test-result pending">Not run yet</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Get/Set Global Variables</h2>
+        <p>Set and get global variables:</p>
+        <button onclick="runTest3Set()">Set myVar = 42</button>
+        <button onclick="runTest3Get()">Get myVar</button>
+        <button onclick="runTest3SetString()">Set myString = "test"</button>
+        <button onclick="runTest3GetString()">Get myString</button>
+        <div id="result3" class="test-result pending">Not run yet</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Error Handling</h2>
+        <p>Test error handling with invalid code:</p>
+        <textarea id="code4">this is not valid berry code!!!</textarea>
+        <br>
+        <button onclick="runTest4()">Run Invalid Code</button>
+        <div id="result4" class="test-result pending">Not run yet</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 5: Call Non-existent Function</h2>
+        <button onclick="runTest5()">Call nonExistentFunction()</button>
+        <div id="result5" class="test-result pending">Not run yet</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Custom Berry Code</h2>
+        <textarea id="customCode">print("Custom code executed!")
+var result = 1 + 2 + 3
+print("Sum: " .. str(result))</textarea>
+        <br>
+        <button onclick="runCustomCode()">Execute</button>
+        <div id="customResult" class="test-result pending">Not run yet</div>
+    </div>
+
+    <!-- Load Berry WASM module -->
+    <script src="berry.js"></script>
+    <!-- Load BerryVM wrapper -->
+    <script src="berry-vm.js"></script>
+    
+    <script>
+        // Console output capture
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const text = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            consoleDiv.textContent += text + '\n';
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        };
+        
+        // Required by Berry WASM module for print() output
+        // This function is called by _js_writebuffer in be_port.c
+        window.writeOutputText = function(text) {
+            consoleDiv.textContent += text;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        };
+        
+        // Required by Berry WASM module for input (not used in this test, but needed)
+        // Returns a promise that resolves to user input
+        window.waitLineText = function() {
+            return Promise.resolve('');
+        };
+        
+        function clearConsole() {
+            consoleDiv.textContent = '';
+        }
+        
+        function setResult(id, success, message) {
+            const el = document.getElementById(id);
+            el.className = 'test-result ' + (success ? 'success' : 'error');
+            el.textContent = message;
+        }
+        
+        // Wait for Berry VM to be ready
+        async function init() {
+            try {
+                await window.berryVM.waitReady();
+                document.getElementById('status').className = 'test-result success';
+                document.getElementById('status').textContent = 'Berry VM is ready!';
+                console.log('Berry VM initialized successfully');
+            } catch (e) {
+                document.getElementById('status').className = 'test-result error';
+                document.getElementById('status').textContent = 'Failed to initialize: ' + e.message;
+            }
+        }
+        
+        // Test 1: Execute simple code
+        async function runTest1() {
+            const code = document.getElementById('code1').value;
+            console.log('--- Test 1: Execute Simple Code ---');
+            const result = await window.berryVM.execute(code);
+            if (result.success) {
+                setResult('result1', true, 'Success! Code executed without errors.');
+            } else {
+                setResult('result1', false, 'Error: ' + result.error);
+            }
+        }
+        
+        // Test 2: Define and call function
+        async function runTest2Define() {
+            const code = document.getElementById('code2').value;
+            console.log('--- Test 2: Define Function ---');
+            const result = await window.berryVM.execute(code);
+            if (result.success) {
+                setResult('result2', true, 'Function defined successfully.');
+            } else {
+                setResult('result2', false, 'Error defining function: ' + result.error);
+            }
+        }
+        
+        async function runTest2Call() {
+            console.log('--- Test 2: Call Function ---');
+            const result = await window.berryVM.callGlobal('greet', 'World');
+            if (result.success) {
+                setResult('result2', true, 'Function returned: ' + JSON.stringify(result.result));
+                console.log('greet("World") returned:', result.result);
+            } else {
+                setResult('result2', false, 'Error calling function: ' + result.error);
+            }
+        }
+        
+        // Test 3: Get/Set globals
+        async function runTest3Set() {
+            console.log('--- Test 3: Set Global Variable ---');
+            const success = await window.berryVM.setGlobal('myVar', 42);
+            if (success) {
+                setResult('result3', true, 'Set myVar = 42 successfully');
+                console.log('Set myVar = 42');
+            } else {
+                setResult('result3', false, 'Failed to set myVar');
+            }
+        }
+        
+        async function runTest3Get() {
+            console.log('--- Test 3: Get Global Variable ---');
+            const value = await window.berryVM.getGlobal('myVar');
+            setResult('result3', true, 'myVar = ' + JSON.stringify(value));
+            console.log('Got myVar =', value);
+        }
+        
+        async function runTest3SetString() {
+            console.log('--- Test 3: Set String Variable ---');
+            const success = await window.berryVM.setGlobal('myString', 'test');
+            if (success) {
+                setResult('result3', true, 'Set myString = "test" successfully');
+                console.log('Set myString = "test"');
+            } else {
+                setResult('result3', false, 'Failed to set myString');
+            }
+        }
+        
+        async function runTest3GetString() {
+            console.log('--- Test 3: Get String Variable ---');
+            const value = await window.berryVM.getGlobal('myString');
+            setResult('result3', true, 'myString = ' + JSON.stringify(value));
+            console.log('Got myString =', value);
+        }
+        
+        // Test 4: Error handling
+        async function runTest4() {
+            const code = document.getElementById('code4').value;
+            console.log('--- Test 4: Error Handling ---');
+            const result = await window.berryVM.execute(code);
+            if (!result.success) {
+                setResult('result4', true, 'Error caught as expected: ' + result.error);
+                console.log('Error handling works correctly');
+            } else {
+                setResult('result4', false, 'Expected an error but code succeeded!');
+            }
+        }
+        
+        // Test 5: Call non-existent function
+        async function runTest5() {
+            console.log('--- Test 5: Call Non-existent Function ---');
+            const result = await window.berryVM.callGlobal('nonExistentFunction');
+            if (!result.success) {
+                setResult('result5', true, 'Error caught as expected: ' + result.error);
+                console.log('Non-existent function error handled correctly');
+            } else {
+                setResult('result5', false, 'Expected an error but call succeeded!');
+            }
+        }
+        
+        // Custom code execution
+        async function runCustomCode() {
+            const code = document.getElementById('customCode').value;
+            console.log('--- Custom Code Execution ---');
+            const result = await window.berryVM.execute(code);
+            if (result.success) {
+                setResult('customResult', true, 'Code executed successfully.');
+            } else {
+                setResult('customResult', false, 'Error: ' + result.error);
+            }
+        }
+        
+        // Initialize when page loads
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Knob Design Options</title>
+    <style>
+        :root {
+            --c_bg: #252525;
+            --c_frm: #4f4f4f;
+            --c_ttl: #eaeaea;
+            --c_txt: #eaeaea;
+            --c_btn: #1fa3ec;
+            --c_btntxt: #faffff;
+            --c_csltxt: #65c115;
+            --c_tab: #999999;
+        }
+        
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: verdana, sans-serif;
+            background: var(--c_bg);
+            color: var(--c_txt);
+            margin: 0;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--c_ttl);
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: var(--c_btn);
+            border-bottom: 1px solid var(--c_frm);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        
+        .description {
+            color: var(--c_tab);
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .knobs-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+            background: var(--c_frm);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .knob-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80px;
+        }
+        
+        .knob-label {
+            font-size: 0.85em;
+            color: var(--c_ttl);
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+        
+        .knob-value-below {
+            font-size: 0.8em;
+            color: var(--c_csltxt);
+            margin-top: 6px;
+        }
+</style>
+</head>
+<body>
+    <h1>🎛️ Knob Design Options</h1>
+    <p style="text-align:center;color:var(--c_tab);">Drag up/down or use scroll wheel to change values. Click to see interaction.</p>
+
+    <!-- Option A: Current Design (Arc Gradient) -->
+    <h2>Option A: Current Design (Arc Gradient)</h2>
+    <p class="description">Circular knobs with conic gradient arc showing value. Inner circle displays numeric value. White indicator dot.</p>
+    <div class="knobs-row" id="knobs-a"></div>
+
+    <!-- Option B: Minimalist Flat -->
+    <h2>Option B: Minimalist Flat</h2>
+    <p class="description">Simple filled circle with a line indicator. No gradients, solid colors. Clean modern look.</p>
+    <div class="knobs-row" id="knobs-b"></div>
+
+    <!-- Option C: LED Ring -->
+    <h2>Option C: LED Ring Style</h2>
+    <p class="description">Segmented arc like LED segments. Each segment lights up as value increases. Color gradient green→yellow→red.</p>
+    <div class="knobs-row" id="knobs-c"></div>
+
+    <!-- Option D: Skeuomorphic 3D -->
+    <h2>Option D: Skeuomorphic 3D</h2>
+    <p class="description">Realistic 3D appearance with shadows and metallic texture. Notched indicator. Hardware-like feel.</p>
+    <div class="knobs-row" id="knobs-d"></div>
+
+    <!-- Option E: Arc Gauge -->
+    <h2>Option E: Arc Gauge Style</h2>
+    <p class="description">Semi-circular gauge (180°) with needle indicator. Scale markings. Classic instrument panel look.</p>
+    <div class="knobs-row" id="knobs-e"></div>
+
+    <!-- Option F: Vertical Faders -->
+    <h2>Option F: Vertical Faders</h2>
+    <p class="description">Vertical sliders instead of circular knobs. Compact, traditional mixer style. Easy touch interaction.</p>
+    <div class="knobs-row" id="knobs-f"></div>
+
+<style>
+/* ========== Option A: Current Arc Gradient ========== */
+.knob-a-wrapper {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 135deg,
+        var(--c_bg) 0deg,
+        var(--c_btn) 0deg,
+        var(--c_btn) var(--knob-angle, 135deg),
+        var(--c_bg) var(--knob-angle, 135deg),
+        var(--c_bg) 270deg
+    );
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    cursor: pointer;
+}
+.knob-a-inner {
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+.knob-a-value {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--c_csltxt);
+}
+.knob-a-indicator {
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--c_btntxt);
+    border-radius: 50%;
+    top: 6px; left: 50%;
+    transform: translateX(-50%) rotate(var(--knob-rotation, 0deg));
+    transform-origin: 50% 24px;
+}
+
+/* ========== Option B: Minimalist Flat ========== */
+.knob-b-wrapper {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #3a3a3a;
+    border: 3px solid var(--c_btn);
+    cursor: pointer;
+}
+.knob-b-indicator {
+    position: absolute;
+    width: 3px;
+    height: 20px;
+    background: var(--c_btntxt);
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(var(--knob-rotation, 0deg));
+    transform-origin: 50% 22px;
+    border-radius: 2px;
+}
+.knob-b-center {
+    position: absolute;
+    width: 20px; height: 20px;
+    background: var(--c_btn);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* ========== Option C: LED Ring ========== */
+.knob-c-wrapper {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    cursor: pointer;
+}
+.knob-c-segment {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #333;
+}
+.knob-c-segment.active { background: var(--seg-color, #65c115); }
+.knob-c-center {
+    position: absolute;
+    width: 36px; height: 36px;
+    background: linear-gradient(145deg, #444, #2a2a2a);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.knob-c-value {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: var(--c_csltxt);
+}
+
+/* ========== Option D: Skeuomorphic 3D ========== */
+.knob-d-wrapper {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #5a5a5a 0%, #3a3a3a 50%, #2a2a2a 100%);
+    box-shadow: 
+        0 4px 8px rgba(0,0,0,0.5),
+        inset 0 2px 4px rgba(255,255,255,0.1),
+        inset 0 -2px 4px rgba(0,0,0,0.3);
+    cursor: pointer;
+}
+.knob-d-ring {
+    position: absolute;
+    top: 4px; left: 4px;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #4a4a4a, #333);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+}
+.knob-d-cap {
+    position: absolute;
+    top: 10px; left: 10px;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #666, #444);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.knob-d-notch {
+    position: absolute;
+    width: 4px;
+    height: 14px;
+    background: linear-gradient(to bottom, #888, #555);
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(var(--knob-rotation, 0deg));
+    transform-origin: 50% 16px;
+    border-radius: 2px;
+}
+
+/* ========== Option E: Arc Gauge ========== */
+.knob-e-wrapper {
+    position: relative;
+    width: 80px;
+    height: 50px;
+    cursor: pointer;
+}
+.knob-e-arc {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 180deg,
+        var(--c_bg) 0deg,
+        var(--c_btn) 0deg,
+        var(--c_btn) var(--gauge-angle, 0deg),
+        #333 var(--gauge-angle, 0deg),
+        #333 180deg,
+        transparent 180deg
+    );
+    clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%);
+}
+.knob-e-inner {
+    position: absolute;
+    width: 60px; height: 60px;
+    background: var(--c_frm);
+    border-radius: 50%;
+    top: 10px; left: 10px;
+}
+.knob-e-needle {
+    position: absolute;
+    width: 3px;
+    height: 30px;
+    background: #ff5555;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) rotate(var(--needle-angle, -90deg));
+    transform-origin: 50% 100%;
+    border-radius: 2px;
+}
+.knob-e-center {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: #666;
+    border-radius: 50%;
+    bottom: -6px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.knob-e-value {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9em;
+    font-weight: bold;
+    color: var(--c_csltxt);
+}
+.knob-e-scale {
+    position: absolute;
+    font-size: 0.6em;
+    color: var(--c_tab);
+}
+.knob-e-scale.left { left: 2px; top: 38px; }
+.knob-e-scale.right { right: 2px; top: 38px; }
+
+/* ========== Option F: Vertical Faders ========== */
+.fader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 50px;
+}
+.fader-wrapper {
+    position: relative;
+    width: 30px;
+    height: 100px;
+    background: linear-gradient(to bottom, #222, #333);
+    border-radius: 4px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+    cursor: pointer;
+}
+.fader-track {
+    position: absolute;
+    width: 4px;
+    height: 90px;
+    background: #444;
+    left: 50%;
+    top: 5px;
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+.fader-fill {
+    position: absolute;
+    width: 4px;
+    background: var(--c_btn);
+    left: 50%;
+    bottom: 5px;
+    transform: translateX(-50%);
+    border-radius: 2px;
+    height: var(--fader-height, 45px);
+}
+.fader-handle {
+    position: absolute;
+    width: 26px;
+    height: 16px;
+    background: linear-gradient(to bottom, #666, #444);
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(var(--fader-height, 45px) - 3px);
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+.fader-handle::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 2px;
+    background: #888;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 1px;
+}
+</style>
+
+<script>
+// Knob creation and interaction logic
+function createKnobA(container, num, value) {
+    var knobContainer = document.createElement('div');
+    knobContainer.className = 'knob-container';
+    
+    var label = document.createElement('div');
+    label.className = 'knob-label';
+    label.textContent = 'K' + num;
+    knobContainer.appendChild(label);
+    
+    var wrapper = document.createElement('div');
+    wrapper.className = 'knob-a-wrapper';
+    updateKnobA(wrapper, value);
+    
+    var inner = document.createElement('div');
+    inner.className = 'knob-a-inner';
+    var valueEl = document.createElement('span');
+    valueEl.className = 'knob-a-value';
+    valueEl.textContent = value;
+    inner.appendChild(valueEl);
+    wrapper.appendChild(inner);
+    
+    var indicator = document.createElement('div');
+    indicator.className = 'knob-a-indicator';
+    wrapper.appendChild(indicator);
+    
+    setupDrag(wrapper, value, function(v) {
+        updateKnobA(wrapper, v);
+        valueEl.textContent = v;
+    });
+    
+    knobContainer.appendChild(wrapper);
+    container.appendChild(knobContainer);
+}
+
+function updateKnobA(wrapper, value) {
+    var angle = (value / 100) * 270;
+    var rotation = -135 + angle;
+    wrapper.style.setProperty('--knob-angle', angle + 'deg');
+    var indicator = wrapper.querySelector('.knob-a-indicator');
+    if (indicator) indicator.style.setProperty('--knob-rotation', rotation + 'deg');
+}
+
+function createKnobB(container, num, value) {
+    var knobContainer = document.createElement('div');
+    knobContainer.className = 'knob-container';
+    
+    var label = document.createElement('div');
+    label.className = 'knob-label';
+    label.textContent = 'K' + num;
+    knobContainer.appendChild(label);
+    
+    var wrapper = document.createElement('div');
+    wrapper.className = 'knob-b-wrapper';
+    
+    var indicator = document.createElement('div');
+    indicator.className = 'knob-b-indicator';
+    wrapper.appendChild(indicator);
+    
+    var center = document.createElement('div');
+    center.className = 'knob-b-center';
+    wrapper.appendChild(center);
+    
+    var valueEl = document.createElement('div');
+    valueEl.className = 'knob-value-below';
+    valueEl.textContent = value;
+    
+    updateKnobB(wrapper, value);
+    setupDrag(wrapper, value, function(v) {
+        updateKnobB(wrapper, v);
+        valueEl.textContent = v;
+    });
+    
+    knobContainer.appendChild(wrapper);
+    knobContainer.appendChild(valueEl);
+    container.appendChild(knobContainer);
+}
+
+function updateKnobB(wrapper, value) {
+    var rotation = -135 + (value / 100) * 270;
+    var indicator = wrapper.querySelector('.knob-b-indicator');
+    if (indicator) indicator.style.setProperty('--knob-rotation', rotation + 'deg');
+}
+
+function createKnobC(container, num, value) {
+    var knobContainer = document.createElement('div');
+    knobContainer.className = 'knob-container';
+    
+    var label = document.createElement('div');
+    label.className = 'knob-label';
+    label.textContent = 'K' + num;
+    knobContainer.appendChild(label);
+    
+    var wrapper = document.createElement('div');
+    wrapper.className = 'knob-c-wrapper';
+    
+    // Create 12 LED segments
+    for (var i = 0; i < 12; i++) {
+        var seg = document.createElement('div');
+        seg.className = 'knob-c-segment';
+        var angle = -135 + (i * 270 / 11);
+        var rad = angle * Math.PI / 180;
+        var x = 32 + 28 * Math.cos(rad) - 3;
+        var y = 32 + 28 * Math.sin(rad) - 3;
+        seg.style.left = x + 'px';
+        seg.style.top = y + 'px';
+        seg.dataset.index = i;
+        wrapper.appendChild(seg);
+    }
+    
+    var center = document.createElement('div');
+    center.className = 'knob-c-center';
+    var valueEl = document.createElement('span');
+    valueEl.className = 'knob-c-value';
+    valueEl.textContent = value;
+    center.appendChild(valueEl);
+    wrapper.appendChild(center);
+    
+    updateKnobC(wrapper, value);
+    setupDrag(wrapper, value, function(v) {
+        updateKnobC(wrapper, v);
+        valueEl.textContent = v;
+    });
+    
+    knobContainer.appendChild(wrapper);
+    container.appendChild(knobContainer);
+}
+
+function updateKnobC(wrapper, value) {
+    var segments = wrapper.querySelectorAll('.knob-c-segment');
+    var activeCount = Math.round((value / 100) * 11);
+    segments.forEach(function(seg, i) {
+        if (i <= activeCount) {
+            seg.classList.add('active');
+            // Color gradient: green -> yellow -> red
+            var ratio = i / 11;
+            if (ratio < 0.5) {
+                seg.style.setProperty('--seg-color', '#65c115');
+            } else if (ratio < 0.75) {
+                seg.style.setProperty('--seg-color', '#f0c000');
+            } else {
+                seg.style.setProperty('--seg-color', '#ff5555');
+            }
+        } else {
+            seg.classList.remove('active');
+        }
+    });
+}
+
+function createKnobD(container, num, value) {
+    var knobContainer = document.createElement('div');
+    knobContainer.className = 'knob-container';
+    
+    var label = document.createElement('div');
+    label.className = 'knob-label';
+    label.textContent = 'K' + num;
+    knobContainer.appendChild(label);
+    
+    var wrapper = document.createElement('div');
+    wrapper.className = 'knob-d-wrapper';
+    
+    var ring = document.createElement('div');
+    ring.className = 'knob-d-ring';
+    wrapper.appendChild(ring);
+    
+    var cap = document.createElement('div');
+    cap.className = 'knob-d-cap';
+    wrapper.appendChild(cap);
+    
+    var notch = document.createElement('div');
+    notch.className = 'knob-d-notch';
+    wrapper.appendChild(notch);
+    
+    var valueEl = document.createElement('div');
+    valueEl.className = 'knob-value-below';
+    valueEl.textContent = value;
+    
+    updateKnobD(wrapper, value);
+    setupDrag(wrapper, value, function(v) {
+        updateKnobD(wrapper, v);
+        valueEl.textContent = v;
+    });
+    
+    knobContainer.appendChild(wrapper);
+    knobContainer.appendChild(valueEl);
+    container.appendChild(knobContainer);
+}
+
+function updateKnobD(wrapper, value) {
+    var rotation = -135 + (value / 100) * 270;
+    var notch = wrapper.querySelector('.knob-d-notch');
+    if (notch) notch.style.setProperty('--knob-rotation', rotation + 'deg');
+}
+
+function createKnobE(container, num, value) {
+    var knobContainer = document.createElement('div');
+    knobContainer.className = 'knob-container';
+    knobContainer.style.width = '90px';
+    
+    var label = document.createElement('div');
+    label.className = 'knob-label';
+    label.textContent = 'K' + num;
+    knobContainer.appendChild(label);
+    
+    var wrapper = document.createElement('div');
+    wrapper.className = 'knob-e-wrapper';
+    
+    var arc = document.createElement('div');
+    arc.className = 'knob-e-arc';
+    wrapper.appendChild(arc);
+    
+    var inner = document.createElement('div');
+    inner.className = 'knob-e-inner';
+    wrapper.appendChild(inner);
+    
+    var needle = document.createElement('div');
+    needle.className = 'knob-e-needle';
+    wrapper.appendChild(needle);
+    
+    var center = document.createElement('div');
+    center.className = 'knob-e-center';
+    wrapper.appendChild(center);
+    
+    var scaleLeft = document.createElement('span');
+    scaleLeft.className = 'knob-e-scale left';
+    scaleLeft.textContent = '0';
+    wrapper.appendChild(scaleLeft);
+    
+    var scaleRight = document.createElement('span');
+    scaleRight.className = 'knob-e-scale right';
+    scaleRight.textContent = '100';
+    wrapper.appendChild(scaleRight);
+    
+    var valueEl = document.createElement('div');
+    valueEl.className = 'knob-e-value';
+    valueEl.textContent = value;
+    wrapper.appendChild(valueEl);
+    
+    updateKnobE(wrapper, value);
+    setupDrag(wrapper, value, function(v) {
+        updateKnobE(wrapper, v);
+        valueEl.textContent = v;
+    });
+    
+    knobContainer.appendChild(wrapper);
+    container.appendChild(knobContainer);
+}
+
+function updateKnobE(wrapper, value) {
+    var gaugeAngle = (value / 100) * 180;
+    var needleAngle = -90 + (value / 100) * 180;
+    var arc = wrapper.querySelector('.knob-e-arc');
+    var needle = wrapper.querySelector('.knob-e-needle');
+    if (arc) arc.style.setProperty('--gauge-angle', gaugeAngle + 'deg');
+    if (needle) needle.style.setProperty('--needle-angle', needleAngle + 'deg');
+}
+
+function createFader(container, num, value) {
+    var faderContainer = document.createElement('div');
+    faderContainer.className = 'fader-container';
+    
+    var label = document.createElement('div');
+    label.className = 'knob-label';
+    label.textContent = 'K' + num;
+    faderContainer.appendChild(label);
+    
+    var wrapper = document.createElement('div');
+    wrapper.className = 'fader-wrapper';
+    
+    var track = document.createElement('div');
+    track.className = 'fader-track';
+    wrapper.appendChild(track);
+    
+    var fill = document.createElement('div');
+    fill.className = 'fader-fill';
+    wrapper.appendChild(fill);
+    
+    var handle = document.createElement('div');
+    handle.className = 'fader-handle';
+    wrapper.appendChild(handle);
+    
+    var valueEl = document.createElement('div');
+    valueEl.className = 'knob-value-below';
+    valueEl.textContent = value;
+    
+    updateFader(wrapper, value);
+    setupFaderDrag(wrapper, value, function(v) {
+        updateFader(wrapper, v);
+        valueEl.textContent = v;
+    });
+    
+    faderContainer.appendChild(wrapper);
+    faderContainer.appendChild(valueEl);
+    container.appendChild(faderContainer);
+}
+
+function updateFader(wrapper, value) {
+    var height = (value / 100) * 90;
+    wrapper.style.setProperty('--fader-height', height + 'px');
+}
+
+// Generic drag handler for knobs
+function setupDrag(element, initialValue, onChange) {
+    var value = initialValue;
+    var isDragging = false;
+    var startY = 0;
+    var startValue = 0;
+    
+    element.addEventListener('mousedown', startDrag);
+    element.addEventListener('touchstart', startDrag, { passive: false });
+    
+    function startDrag(e) {
+        e.preventDefault();
+        isDragging = true;
+        startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+        startValue = value;
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchmove', onDrag, { passive: false });
+        document.addEventListener('touchend', stopDrag);
+    }
+    
+    function onDrag(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        var currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        var deltaY = startY - currentY;
+        value = Math.max(0, Math.min(100, startValue + Math.round(deltaY / 2)));
+        onChange(value);
+    }
+    
+    function stopDrag() {
+        isDragging = false;
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('touchend', stopDrag);
+    }
+    
+    element.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        var delta = e.deltaY > 0 ? -5 : 5;
+        value = Math.max(0, Math.min(100, value + delta));
+        onChange(value);
+    }, { passive: false });
+}
+
+// Fader-specific drag (vertical)
+function setupFaderDrag(element, initialValue, onChange) {
+    var value = initialValue;
+    var isDragging = false;
+    
+    element.addEventListener('mousedown', startDrag);
+    element.addEventListener('touchstart', startDrag, { passive: false });
+    
+    function startDrag(e) {
+        e.preventDefault();
+        isDragging = true;
+        updateFromEvent(e);
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchmove', onDrag, { passive: false });
+        document.addEventListener('touchend', stopDrag);
+    }
+    
+    function onDrag(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        updateFromEvent(e);
+    }
+    
+    function updateFromEvent(e) {
+        var rect = element.getBoundingClientRect();
+        var y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        var relY = rect.bottom - y - 5;
+        value = Math.max(0, Math.min(100, Math.round((relY / 90) * 100)));
+        onChange(value);
+    }
+    
+    function stopDrag() {
+        isDragging = false;
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('touchend', stopDrag);
+    }
+}
+
+// Initialize all knob types
+document.addEventListener('DOMContentLoaded', function() {
+    var containerA = document.getElementById('knobs-a');
+    var containerB = document.getElementById('knobs-b');
+    var containerC = document.getElementById('knobs-c');
+    var containerD = document.getElementById('knobs-d');
+    var containerE = document.getElementById('knobs-e');
+    var containerF = document.getElementById('knobs-f');
+    
+    for (var i = 1; i <= 4; i++) {
+        var val = 20 + (i - 1) * 25; // 20, 45, 70, 95
+        createKnobA(containerA, i, val);
+        createKnobB(containerB, i, val);
+        createKnobC(containerC, i, val);
+        createKnobD(containerD, i, val);
+        createKnobE(containerE, i, val);
+        createFader(containerF, i, val);
+    }
+});
+</script>
+</body>
+</html>
