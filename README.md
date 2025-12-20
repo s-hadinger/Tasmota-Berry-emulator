@@ -4,7 +4,9 @@ A browser-based simulator for the [Berry Animation Framework](lib/libesp32/berry
 
 ## 🌐 Try It Now
 
-**[Launch the Simulator](https://raw.githubusercontent.com/s-hadinger/Tasmota-Berry-emulator/main/dist/index.html)**
+**[Launch the Emulator](https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html)**
+
+<img width="353" height="728" alt="Tasmota_Berry_LED_emulator" src="https://github.com/user-attachments/assets/9fec9c91-32b3-4e80-be0e-cdb53c15276e" />
 
 No installation required - runs entirely in your browser.
 
