@@ -436,9 +436,6 @@ Generates colors from predefined palettes with smooth transitions and profession
 | `PALETTE_RAINBOW` | Standard 7-color rainbow | Red → Orange → Yellow → Green → Blue → Indigo → Violet |
 | `PALETTE_RGB` | Simple RGB cycle | Red → Green → Blue |
 | `PALETTE_FIRE` | Warm fire colors | Black → Dark Red → Red → Orange → Yellow |
-| `PALETTE_SUNSET_TICKS` | Sunset colors with equal timing | Orange Red → Dark Orange → Gold → Hot Pink → Purple → Midnight Blue |
-| `PALETTE_OCEAN` | Blue and green ocean tones | Navy → Blue → Cyan → Spring Green → Green |
-| `PALETTE_FOREST` | Various green forest tones | Dark Green → Forest Green → Lime Green → Mint Green → Light Green |
 
 #### Usage Examples
 
@@ -457,13 +454,6 @@ color fire_colors = rich_palette(
   cycle_period=3s,
   transition_type=LINEAR,
   brightness=200
-)
-
-# Ocean waves with default linear transitions
-color ocean_colors = rich_palette(
-  palette=PALETTE_OCEAN,
-  cycle_period=8s,
-  brightness=180
 )
 ```
 

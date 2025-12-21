@@ -45,16 +45,24 @@ EM_JS(char*, js_call_impl, (const char* func_name_ptr, const char* args_json_ptr
         var funcName = UTF8ToString(func_name_ptr);
         var argsJson = UTF8ToString(args_json_ptr);
         var args = [];
-        
         // Try to parse as JSON array, but if it fails, treat as single string argument
         if (argsJson) {
-            try {
-                args = JSON.parse(argsJson);
-                if (!Array.isArray(args)) {
-                    args = [args];
+            // Only try JSON parsing if it looks like JSON (starts with [ or {)
+            // This prevents hex strings like "070000..." from being parsed as numbers
+            if (argsJson.charAt(0) === '[' || argsJson.charAt(0) === '{') {
+                try {
+                    var parsed = JSON.parse(argsJson);
+                    if (Array.isArray(parsed)) {
+                        args = parsed;
+                    } else {
+                        args = [parsed];
+                    }
+                } catch (parseErr) {
+                    // JSON parse failed - treat as single string argument
+                    args = [argsJson];
                 }
-            } catch (parseErr) {
-                // Not valid JSON - treat as single string argument
+            } else {
+                // Not JSON format - treat as single string argument
                 args = [argsJson];
             }
         }

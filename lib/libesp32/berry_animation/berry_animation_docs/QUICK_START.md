@@ -146,25 +146,6 @@ animation fire = rich_palette(
 run fire
 ```
 
-### Ocean Waves
-```berry
-animation ocean = rich_palette(
-  palette=PALETTE_OCEAN
-  cycle_period=6s
-  transition_type=1
-)
-
-run ocean
-```
-
-## Tips for Success
-
-1. **Start Simple** - Begin with solid colors and basic effects
-2. **Use Predefined Palettes** - Try PALETTE_RAINBOW, PALETTE_FIRE, PALETTE_OCEAN
-3. **Test Incrementally** - Add one animation at a time
-4. **Use Named Colors** - red, blue, green, white, etc.
-5. **Start with Longer Periods** - 3-5 seconds, then adjust as needed
-
 ## Loading DSL Files
 
 Save your DSL code in `.anim` files and load them:
