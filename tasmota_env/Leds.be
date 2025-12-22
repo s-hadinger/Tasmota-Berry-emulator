@@ -141,6 +141,12 @@ class Leds
       import js
       var js_size = int(js.get_strip_size())
       if js_size > 0
+        # Resize internal buffer if needed
+        if js_size != self.leds
+          self.leds = js_size
+          self._buf = bytes(js_size * 3)
+          self._buf.resize(js_size * 3)
+        end
         return js_size
       end
     end
@@ -161,7 +167,8 @@ class Leds
     var g = (rgb >>  8) & 0xFF
     var b = (rgb      ) & 0xFF
     var i = 0
-    while i < self.leds
+    var count = self.pixel_count()  # Use pixel_count() to trigger buffer resize if needed
+    while i < count
       buf[i * 3 + 0] = r
       buf[i * 3 + 1] = g
       buf[i * 3 + 2] = b
