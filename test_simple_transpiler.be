@@ -152,7 +152,7 @@ var simple_dsl =
 # "palette pal_x = [red, orange, yellow, green, blue, indigo, white]\n"
 # "set duration_x = 3s\n"
 # "set duration_dyn = sawtooth(min_value = strip_len, max_value = strip_len / 2 + 1, duration = duration_x)\n"
-# "color col_x = color_cycle(palette=pal_x, cycle_period=0)\n"
+# "color col_x = color_cycle(palette=pal_x, period=0)\n"
 # "animation shutter_x = beacon_animation()\n"
 # "sequence shutter_seq repeat forever {\n"
 # "  repeat col_x.palette_size times {\n"

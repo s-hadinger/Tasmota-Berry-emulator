@@ -14,7 +14,7 @@ palette rainbow_with_white = [
 ]
 
 # define a color attribute cycles color in space
-color rainbow_rich_color = rich_palette(colors=rainbow_with_white, cycle_period=0, transition_type=SINE)
+color rainbow_rich_color = rich_palette(colors=rainbow_with_white, period=0, transition_type=SINE)
 
 # define a gradient across the whole strip
 animation back_pattern = palette_gradient_animation(color_source = rainbow_rich_color, shift_period = 5s)

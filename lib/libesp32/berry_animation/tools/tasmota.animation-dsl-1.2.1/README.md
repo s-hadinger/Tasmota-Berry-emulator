@@ -49,8 +49,8 @@ template fire_effect {
   param duration
   
   animation campfire = rich_palette_animation(
-    palette=base_palette
-    cycle_period=duration
+    colors=base_palette
+    period=duration
   )
   
   # Use computed values and user functions

@@ -58,18 +58,18 @@ palette Magenta
 # Use any palette in your animations
 animation fire_effect = rich_palette(
   palette=Fire
-  cycle_period=3s
+  period=3s
 )
 
 # Color cycling with beautiful names
 color dynamic_color = color_cycle(
   palette=Sakura
-  cycle_period=5s
+  period=5s
 )
 
 # Mix and match palettes
 animation sunset_pulse = pulsating_animation(
-  color=color_cycle(palette=Sunset, cycle_period=10s)
+  color=color_cycle(colors=Sunset, period=10s)
   period=2s
 )
 ```
@@ -101,8 +101,8 @@ All 104 palettes are now available in the Berry Animation Framework with beautif
 ```berry
 # Example: Create a beautiful aurora effect
 animation northern_lights = rich_palette(
-  palette=Aurora
-  cycle_period=8s
+  colors=Aurora
+  period=8s
 )
 
 run northern_lights

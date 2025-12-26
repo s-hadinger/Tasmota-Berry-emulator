@@ -83,14 +83,14 @@ You can now use any of these palettes in your DSL code:
 ```berry
 # Use a converted palette
 animation rainbow_effect = rich_palette(
-  palette=analogous_1
-  cycle_period=3s
+  colors=analogous_1
+  period=3s
 )
 
 # Or use in color cycling
 color dynamic_color = color_cycle(
-  palette=lava
-  cycle_period=5s
+  colors=lava
+  period=5s
 )
 ```
 

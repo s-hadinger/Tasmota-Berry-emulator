@@ -60,25 +60,25 @@ palette PALETTE_JUL = [
 # Fire animation with gamma-corrected colors
 animation campfire = rich_palette(
   palette=PALETTE_FIRE
-  cycle_period=4s
+  period=4s
 )
 
 # Cherry blossom effect
 animation spring_bloom = rich_palette(
   palette=PALETTE_SAKURA
-  cycle_period=6s
+  period=6s
 )
 
 # Aurora borealis
 animation northern_lights = rich_palette(
   palette=PALETTE_AURORA
-  cycle_period=12s
+  period=12s
 )
 
 # Orange and teal modern look
 animation modern_gradient = rich_palette(
   palette=PALETTE_ORANGE_AND_TEAL
-  cycle_period=3s
+  period=3s
 )
 
 run campfire
