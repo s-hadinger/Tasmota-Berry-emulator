@@ -32,12 +32,16 @@ TUTORIALS_DIR = "lib/libesp32/berry_animation/anim_tutorials"
 OUTPUT_FILE = "dist/animation-examples.js"
 
 # Category mapping based on filename prefixes
+# Matches chapter names from ANIMATION_TUTORIAL.md
 CATEGORY_MAP = {
-    "chap_1": "Basics",
-    "chap_2": "Effects",
-    "chap_3": "Advanced",
-    "chap_4": "Sequences",
-    "chap_5": "Templates",
+    "chap_1": "1. Getting Started",
+    "chap_2": "2. Color Cycling",
+    "chap_3": "3. Smooth Transitions",
+    "chap_4": "4. Spatial Patterns",
+    "chap_5": "5. Beacons & Moving",
+    "chap_6": "6. Shutters & Sequences",
+    "chap_7": "7. Crenel Patterns",
+    "chap_8": "8. Templates",
 }
 
 
