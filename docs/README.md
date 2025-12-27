@@ -5,6 +5,7 @@ This folder contains documentation for the Berry Animation Framework and related
 ## Features
 
 - **LED Strip API** - JavaScript interface for LED visualization
+- **URL Parameters API** - Share direct links to specific animation examples
 - **APNG Export** - Export animations as animated PNG files for sharing
 
 ## LED Strip API Documentation
@@ -63,6 +64,51 @@ Canvas Rendering (HTML5 Canvas)
 ✅ **Testable** - Can be tested independently of Berry code  
 ✅ **Maintainable** - Single source of truth for LED rendering  
 ✅ **Synchronized** - LED count changes are automatically propagated to Berry  
+
+## URL Parameters API
+
+The simulator supports loading specific examples directly via URL parameters, making it easy to share links to specific animations.
+
+### Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `example` | Load an example by its ID |
+| `ex` | Short alias for `example` |
+
+### Usage
+
+```
+https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html?example=<example_id>
+```
+
+### Examples
+
+| Animation | URL |
+|-----------|-----|
+| Simple solid color | [?example=chap_1_00_plain](https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html?example=chap_1_00_plain) |
+| Twinkle stars | [?example=chap_1_30_twinkle](https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html?example=chap_1_30_twinkle) |
+| Night sky | [?example=chap_2_10_sky](https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html?example=chap_2_10_sky) |
+| Rainbow gradient | [?example=chap_4_10_color_pattern](https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html?example=chap_4_10_color_pattern) |
+| Cylon eye | [?example=chap_5_10_template_cylon_simple](https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html?example=chap_5_10_template_cylon_simple) |
+| VU meter | [?example=chap_4_30_color_pattern_meter](https://tasmota.github.io/docs/Tasmota-Berry-emulator/index.html?example=chap_4_30_color_pattern_meter) |
+
+### Behavior
+
+- If the example ID is valid, the animation loads and auto-runs
+- If the example ID is not found, a warning is logged to the console with all available IDs
+- If no parameter is provided, the default example runs
+
+### Finding Example IDs
+
+Example IDs follow the pattern `chap_X_YY_name` where:
+- `X` is the chapter number (1-5)
+- `YY` is the section number
+- `name` is a descriptive identifier
+
+You can find all available IDs by:
+1. Opening the Examples panel in the simulator
+2. Checking the browser console if an invalid ID is provided
 
 ## APNG Export
 
