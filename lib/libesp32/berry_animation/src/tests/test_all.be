@@ -75,6 +75,7 @@ def run_all_tests()
     "lib/libesp32/berry_animation/src/tests/twinkle_animation_test.be",
     "lib/libesp32/berry_animation/src/tests/crenel_position_animation_test.be",
     "lib/libesp32/berry_animation/src/tests/beacon_animation_test.be",
+    "lib/libesp32/berry_animation/src/tests/test_beacon_direction.be",
     "lib/libesp32/berry_animation/src/tests/gradient_animation_test.be",
     "lib/libesp32/berry_animation/src/tests/palette_meter_animation_test.be",
     "lib/libesp32/berry_animation/src/tests/noise_animation_test.be",

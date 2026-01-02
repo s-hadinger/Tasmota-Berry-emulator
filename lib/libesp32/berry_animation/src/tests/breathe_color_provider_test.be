@@ -194,8 +194,8 @@ var alpha_color = alpha_test.produce_value("color", engine.time_ms)
 var alpha_actual = (alpha_color >> 24) & 0xFF
 print(f"Alpha preservation test - expected 128, got: {alpha_actual}")
 
-# Test tostring method
-print(f"Provider string representation: {blue_breathe.tostring()}")
+# Test string representation (uses default from Berry)
+print(f"Provider string representation: {str(blue_breathe)}")
 
 # Validate key test results
 assert(provider != nil, "Default breathe color provider should be created")
@@ -207,7 +207,7 @@ assert(blue_breathe.min_brightness == 30, "Min brightness should be updated to 3
 assert(blue_breathe.max_brightness == 220, "Max brightness should be updated to 220")
 assert(blue_breathe.duration == 3500, "Duration should be updated to 3500")
 assert(blue_breathe.curve_factor == 4, "Curve factor should be updated to 4")
-assert(blue_breathe.form == animation.COSINE, "Form should be COSINE")
+assert(blue_breathe.form == 4 #-COSINE-#, "Form should be COSINE")
 assert(blue_breathe.min_value == 0, "Inherited min_value should be 0")
 assert(blue_breathe.max_value == 255, "Inherited max_value should be 255")
 assert(blue_breathe.engine == engine, "Provider should have correct engine reference")
