@@ -58,25 +58,25 @@ palette PALETTE_JUL = [
 
 ```berry
 # Fire animation with gamma-corrected colors
-animation campfire = rich_palette(
+animation campfire = rich_palette_color(
   palette=PALETTE_FIRE
   period=4s
 )
 
 # Cherry blossom effect
-animation spring_bloom = rich_palette(
+animation spring_bloom = rich_palette_color(
   palette=PALETTE_SAKURA
   period=6s
 )
 
 # Aurora borealis
-animation northern_lights = rich_palette(
+animation northern_lights = rich_palette_color(
   palette=PALETTE_AURORA
   period=12s
 )
 
 # Orange and teal modern look
-animation modern_gradient = rich_palette(
+animation modern_gradient = rich_palette_color(
   palette=PALETTE_ORANGE_AND_TEAL
   period=3s
 )

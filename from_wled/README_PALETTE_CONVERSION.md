@@ -82,7 +82,7 @@ You can now use any of these palettes in your DSL code:
 
 ```berry
 # Use a converted palette
-animation rainbow_effect = rich_palette(
+animation rainbow_effect = rich_palette_color(
   colors=analogous_1
   period=3s
 )

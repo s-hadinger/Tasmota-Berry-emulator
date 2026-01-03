@@ -28,7 +28,7 @@ var simple_dsl =
 #   "set strip_len = strip_length()\n"
 #   "set shutter_size = sawtooth(min_value = 0, max_value = strip_len, duration = duration)"
 
-#   "animation shutter_seq = beacon_animation(\n"
+#   "animation shutter_seq = beacon(\n"
 #   ")\n"
 
 #   "run shutter_seq\n"
@@ -66,7 +66,7 @@ var simple_dsl =
 # "shutter_size.max_value = strip_len\n"
 # "shutter_size.max_value = strip_length()\n"
 # "shutter_size.min_value = strip_len / 2\n"
-# "animation test = pulsating_animation(color=0xFF0000FF, min_brightness=(0+1))\n"
+# "animation test = breathe(color=0xFF0000FF, min_brightness=(0+1))\n"
 
 
 # "palette col1 = [red, orange, yellow, green, blue, indigo, white]\n"
@@ -134,9 +134,9 @@ var simple_dsl =
 # "\n"
 # "palette fire_color = [ 0x800000, 0xFF0000, 0xFF4500, 0xFFFF00 ]\n"
 # "set eye_pos = cosine_osc(min_value = -1, max_value = strip_len - 2, duration = 6s)\n"
-# "animation eye_mask = beacon_animation(color = white, back_color = transparent, pos = eye_pos, beacon_size = 4, slew_size = 2, priority = 5)\n"
+# "animation eye_mask = beacon(color = white, back_color = transparent, pos = eye_pos, beacon_size = 4, slew_size = 2, priority = 5)\n"
 
-# "animation fire_pattern = palette_gradient_animation(\n"
+# "animation fire_pattern = palette_gradient(\n"
 # "  color_source = fire_color\n"
 # "  spatial_period = strip_len / 4\n"
 # "  opacity = eye_mask\n"
@@ -153,7 +153,7 @@ var simple_dsl =
 # "set duration_x = 3s\n"
 # "set duration_dyn = sawtooth(min_value = strip_len, max_value = strip_len / 2 + 1, duration = duration_x)\n"
 # "color col_x = color_cycle(palette=pal_x, period=0)\n"
-# "animation shutter_x = beacon_animation()\n"
+# "animation shutter_x = beacon()\n"
 # "sequence shutter_seq repeat forever {\n"
 # "  repeat col_x.palette_size times {\n"
 # # "  repeat duration_dyn times {\n"

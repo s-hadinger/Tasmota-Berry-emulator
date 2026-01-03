@@ -1,7 +1,7 @@
 # Breathe Color Provider for Berry Animation Framework
 #
 # This color provider creates breathing/pulsing color effects by modulating the brightness
-# of a base color over time. It inherits from OscillatorValueProvider to leverage its
+# of a base color over time. It inherits from oscillator_value to leverage its
 # robust time management and waveform generation, then applies the oscillator value
 # as brightness modulation to a base color.
 #
@@ -11,8 +11,8 @@
 
 import "./core/param_encoder" as encode_constraints
 
-#@ solidify:BreatheColorProvider,weak
-class BreatheColorProvider : animation.oscillator_value
+#@ solidify:breathe_color,weak
+class breathe_color : animation.oscillator_value
   # Additional parameter definitions for color-specific functionality
   # The oscillator parameters (min_value, max_value, duration, form, etc.) are inherited
   static var PARAMS = animation.enc_params({
@@ -27,7 +27,7 @@ class BreatheColorProvider : animation.oscillator_value
   #
   # @param engine: AnimationEngine - The animation engine (required)
   def init(engine)
-    # Call parent constructor (OscillatorValueProvider)
+    # Call parent constructor (oscillator_value)
     super(self).init(engine)
     
     # Configure the inherited oscillator for breathing behavior
@@ -102,12 +102,4 @@ class BreatheColorProvider : animation.oscillator_value
   end
 end
 
-# Factory function to create a pulsating color provider (sine wave)
-def pulsating_color_provider(engine)
-  var provider = animation.breathe_color(engine)
-  provider.curve_factor = 1  # Pure cosine wave for pulsing effect
-  provider.duration = 1000   # Faster default duration for pulsing
-  return provider
-end
-
-return {'breathe_color': BreatheColorProvider, 'pulsating_color': pulsating_color_provider}
+return {'breathe_color': breathe_color}

@@ -58,7 +58,7 @@ open dist/index.html
 The simulator includes a library of example animations - just select one from the Animation Library panel and click "Compile & Run". Here's a sample of what the DSL looks like:
 
 ```berry
-# @desc Smooth color transitions using rich_palette with sine interpolation
+# @desc Smooth color transitions using rich_palette_color with sine interpolation
 
 # define a palette of rainbow colors including white with constant brightness
 palette rainbow_with_white = [
@@ -74,7 +74,7 @@ palette rainbow_with_white = [
 ]
 
 # define a color attribute that cycles over time, cycle is 10 seconds
-color rainbow_rich_color = rich_palette(colors=rainbow_with_white, period=10s, transition_type=SINE)
+color rainbow_rich_color = rich_palette_color(colors=rainbow_with_white, period=10s, transition_type=SINE)
 
 animation back = solid(color=rainbow_rich_color)
 
