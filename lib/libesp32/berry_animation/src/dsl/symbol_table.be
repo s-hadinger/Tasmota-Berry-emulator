@@ -2,7 +2,6 @@
 # Enhanced symbol caching and management for the Animation DSL
 
 # Symbol table entry class for enhanced symbol caching
-#@ solidify:SymbolEntry,weak
 class SymbolEntry
   # Type constants
   static var TYPE_PALETTE_CONSTANT = 1
@@ -318,7 +317,6 @@ class MockEngine
 end
 
 # Enhanced symbol table class for holistic symbol management and caching
-#@ solidify:SymbolTable,weak
 class SymbolTable
   var entries        # Map of name -> SymbolEntry
   var mock_engine    # MockEngine for validation
@@ -396,7 +394,7 @@ class SymbolTable
               var entry = animation_dsl._symbol_entry.create_color_constructor(name, instance, true)
               self.entries[name] = entry
               return entry
-            elif isinstance(instance, animation.value_provider)
+            elif animation.is_value_provider(instance)
               var entry = animation_dsl._symbol_entry.create_value_provider_constructor(name, instance, true)
               self.entries[name] = entry
               return entry

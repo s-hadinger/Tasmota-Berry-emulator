@@ -8,7 +8,6 @@
 
 import "./core/param_encoder" as encode_constraints
 
-#@ solidify:comet,weak
 class comet : animation.animation
   # Non-parameter instance variables only
   var head_position    # Current position of the comet head (in 1/256th pixels for smooth movement)
@@ -42,10 +41,12 @@ class comet : animation.animation
     if name == "direction"
       # Reset position when direction changes
       var strip_length = self.engine.strip_length
-      if value > 0
-        self.head_position = 0  # Start at beginning for forward movement
-      else
-        self.head_position = (strip_length - 1) * 256  # Start at end for backward movement
+      if type(value) == 'int'
+        if value > 0
+          self.head_position = 0  # Start at beginning for forward movement
+        else
+          self.head_position = (strip_length - 1) * 256  # Start at end for backward movement
+        end
       end
     end
   end
