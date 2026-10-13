@@ -17,13 +17,10 @@ def _wasm_transition_impl(settings, attr):
     if attr.exit_runtime == True:
         features.append("exit_runtime")
 
-    if attr.backend == "llvm":
-        features.append("llvm_backend")
-    elif attr.backend == "emscripten":
-        features.append("-llvm_backend")
-
-    if attr.simd:
+    if attr.simd != "off":
         features.append("wasm_simd")
+        if attr.simd == "relaxed_simd":
+            features.append("wasm_relaxed_simd")
 
     platform = "@emsdk//:platform_wasm"
     if attr.standalone:
@@ -64,16 +61,14 @@ _ALLOW_OUTPUT_EXTNAMES = [
     ".wasm",
     ".wasm.map",
     ".data",
-    ".js.symbols",
+    ".symbols",
     ".wasm.debug.wasm",
     ".html",
+    ".ts",
+    ".d.ts",
 ]
 
 _WASM_BINARY_COMMON_ATTRS = {
-    "backend": attr.string(
-        default = "_default",
-        values = ["_default", "emscripten", "llvm"],
-    ),
     "cc_target": attr.label(
         cfg = _wasm_transition,
         mandatory = True,
@@ -85,8 +80,10 @@ _WASM_BINARY_COMMON_ATTRS = {
         default = "_default",
         values = ["_default", "emscripten", "off"],
     ),
-    "simd": attr.bool(
-        default = False,
+    "simd": attr.string(
+        default = "off",
+        values = ["off", "simd128", "relaxed_simd"],
+        doc = "Enable SIMD support via emscripten.",
     ),
     "standalone": attr.bool(
         default = False,
@@ -189,7 +186,7 @@ def _wasm_binary_legacy_outputs(name, cc_target):
         "wasm": "{}/{}.wasm".format(name, basename),
         "map": "{}/{}.wasm.map".format(name, basename),
         "data": "{}/{}.data".format(name, basename),
-        "symbols": "{}/{}.js.symbols".format(name, basename),
+        "symbols": "{}/{}.symbols".format(name, basename),
         "dwarf": "{}/{}.wasm.debug.wasm".format(name, basename),
         "html": "{}/{}.html".format(name, basename),
     }

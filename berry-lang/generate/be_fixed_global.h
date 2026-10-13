@@ -1,11 +1,11 @@
 #include "be_constobj.h"
 
 static be_define_const_map_slots(m_libglobal_map) {
-    { be_const_key(undef, -1), be_const_func(m_undef) },
-    { be_const_key(setmember, 3), be_const_func(m_setglobal) },
-    { be_const_key(contains, -1), be_const_func(m_contains) },
-    { be_const_key(member, 4), be_const_func(m_findglobal) },
-    { be_const_key(_X28_X29, -1), be_const_func(m_globals) },
+    { be_ckey(undef, -1), be_ckv_func(m_undef) },
+    { be_ckey(setmember, 3), be_ckv_func(m_setglobal) },
+    { be_ckey(contains, -1), be_ckv_func(m_contains) },
+    { be_ckey(member, 4), be_ckv_func(m_findglobal) },
+    { be_ckey(_X28_X29, -1), be_ckv_func(m_globals) },
 };
 
 static be_define_const_map(

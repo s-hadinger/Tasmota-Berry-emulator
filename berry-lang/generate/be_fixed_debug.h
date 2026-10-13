@@ -1,19 +1,19 @@
 #include "be_constobj.h"
 
 static be_define_const_map_slots(m_libdebug_map) {
-    { be_const_key(upvname, -1), be_const_func(m_upvname) },
-    { be_const_key(gcdebug, -1), be_const_func(m_gcdebug) },
-    { be_const_key(codedump, -1), be_const_func(m_codedump) },
-    { be_const_key(allocs, -1), be_const_func(m_allocs) },
-    { be_const_key(traceback, -1), be_const_func(m_traceback) },
-    { be_const_key(calldepth, 8), be_const_func(m_calldepth) },
-    { be_const_key(attrdump, 7), be_const_func(m_attrdump) },
-    { be_const_key(top, -1), be_const_func(m_top) },
-    { be_const_key(frees, -1), be_const_func(m_frees) },
-    { be_const_key(varname, -1), be_const_func(m_varname) },
-    { be_const_key(reallocs, 1), be_const_func(m_reallocs) },
-    { be_const_key(counters, 9), be_const_func(m_counters) },
-    { be_const_key(caller, -1), be_const_func(m_caller) },
+    { be_ckey(upvname, -1), be_ckv_func(m_upvname) },
+    { be_ckey(gcdebug, -1), be_ckv_func(m_gcdebug) },
+    { be_ckey(codedump, -1), be_ckv_func(m_codedump) },
+    { be_ckey(allocs, -1), be_ckv_func(m_allocs) },
+    { be_ckey(traceback, -1), be_ckv_func(m_traceback) },
+    { be_ckey(calldepth, 8), be_ckv_func(m_calldepth) },
+    { be_ckey(attrdump, 7), be_ckv_func(m_attrdump) },
+    { be_ckey(top, -1), be_ckv_func(m_top) },
+    { be_ckey(frees, -1), be_ckv_func(m_frees) },
+    { be_ckey(varname, -1), be_ckv_func(m_varname) },
+    { be_ckey(reallocs, 1), be_ckv_func(m_reallocs) },
+    { be_ckey(counters, 9), be_ckv_func(m_counters) },
+    { be_ckey(caller, -1), be_ckv_func(m_caller) },
 };
 
 static be_define_const_map(

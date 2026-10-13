@@ -73,7 +73,16 @@ typedef struct {
     bfuncinfo *finfo;
     bclosure *cl;
     bbyte islocal;
+    bbyte depth;  /* recursion depth for expr/block; bounded by BE_MAX_PARSER_DEPTH (must fit in bbyte) */
 } bparser;
+
+#define enter_recursion(parser) do { \
+    if (++(parser)->depth > BE_MAX_PARSER_DEPTH) { \
+        push_error((parser), "expression or block too deeply nested"); \
+    } \
+} while (0)
+
+#define leave_recursion(parser)  (--(parser)->depth)
 
 #if BE_USE_SCRIPT_COMPILER
 
@@ -166,26 +175,23 @@ void begin_varinfo(bparser *parser, bstring *name)
     finfo->proto->nvarinfo = be_vector_capacity(&finfo->varvec);
 }
 
-void end_varinfo(bparser *parser, int beginpc)
+void end_varinfo(bparser *parser)
 {
     bfuncinfo *finfo = parser->finfo;
-    bblockinfo *binfo = finfo->binfo;
-    bvarinfo *it = be_vector_data(&finfo->varvec);
-    bvarinfo *end = be_vector_end(&finfo->varvec);
-    if (beginpc == -1) /* use block->beginpc by default */
-        beginpc = binfo->beginpc;
-    /* skip the variable of the previous blocks */
-    for (; (it <= end) && (it->beginpc < beginpc); ++it);
-    for (; it <= end; ++it) {
-        if (!it->endpc) /* write to endpc only once */
-            it->endpc = finfo->pc;
+    bvarinfo *var = be_vector_data(&finfo->varvec);
+    int i, count = be_vector_count(&finfo->varvec);
+    /* skip the variables of the previous blocks: a variable declared just
+     * before the block can have the same beginpc as the block itself */
+    for (i = finfo->binfo->nvarinfo; i < count; ++i) {
+        if (!var[i].endpc) /* write to endpc only once */
+            var[i].endpc = finfo->pc;
     }
 }
 
 #else
 
 #define begin_varinfo(parser, name)
-#define end_varinfo(parser, beginpc) (void)(beginpc)
+#define end_varinfo(parser)
 
 #endif
 
@@ -200,13 +206,16 @@ static void begin_block(bfuncinfo *finfo, bblockinfo *binfo, int type)
     binfo->lastjmp = 0;
     binfo->beginpc = finfo->pc; /* set starting pc for this block */
     binfo->nactlocals = (bbyte)be_list_count(finfo->local); /* count number of local variables in previous block */
+#if BE_DEBUG_VAR_INFO
+    binfo->nvarinfo = be_vector_count(&finfo->varvec);
+#endif
     if (type & BLOCK_LOOP) {
         binfo->breaklist = NO_JUMP;
         binfo->continuelist = NO_JUMP;
     }
 }
 
-static void end_block_ex(bparser *parser, int beginpc)
+static void end_block(bparser *parser)
 {
     bfuncinfo *finfo = parser->finfo;
     bblockinfo *binfo = finfo->binfo;
@@ -216,15 +225,10 @@ static void end_block_ex(bparser *parser, int beginpc)
         be_code_patchjump(finfo, binfo->breaklist);
         be_code_patchlist(finfo, binfo->continuelist, binfo->beginpc);
     }
-    end_varinfo(parser, beginpc);
+    end_varinfo(parser);
     be_list_resize(parser->vm, finfo->local, binfo->nactlocals); /* remove local variables from this block, they are now out of scope */
     finfo->freereg = binfo->nactlocals; /* adjust first free register accordingly */
     finfo->binfo = binfo->prev; /* restore previous block */
-}
-
-static void end_block(bparser *parser)
-{
-    end_block_ex(parser, -1);
 }
 
 #if BE_DEBUG_SOURCE_FILE
@@ -250,8 +254,10 @@ static void begin_func(bparser *parser, bfuncinfo *finfo, bblockinfo *binfo)
     proto->code = be_vector_data(&finfo->code);
     proto->codesize = be_vector_capacity(&finfo->code);
     be_vector_init(vm, &finfo->kvec, sizeof(bvalue)); /* vector for constants */
+#if !BE_USE_COMPACT_KTAB
     proto->ktab = be_vector_data(&finfo->kvec);
     proto->nconst = be_vector_capacity(&finfo->kvec);
+#endif
     be_vector_init(vm, &finfo->pvec, sizeof(bproto*)); /* vector for subprotos */
     proto->ptab = be_vector_data(&finfo->pvec);
     proto->nproto = be_vector_capacity(&finfo->pvec);
@@ -322,13 +328,29 @@ static void end_func(bparser *parser)
     setupvals(finfo); /* close upvals */
     proto->code = be_vector_release(vm, &finfo->code); /* compact all vectors and return NULL if empty */
     proto->codesize = finfo->pc;
+#if BE_USE_COMPACT_KTAB
+    {   /* build the compact constant table from the scratch bvalue vector */
+        bvalue *kdata = be_vector_release(vm, &finfo->kvec);
+        int nconst = be_vector_count(&finfo->kvec);
+        /* keep the released bvalue[] visible to the GC (ktype==NULL sentinel)
+         * while be_proto_set_ktab allocates the compact block (which may GC) */
+        proto->kval = (union bvaldata*) kdata;
+        proto->ktype = NULL;
+        proto->nconst = (int16_t)nconst;
+        be_proto_set_ktab(vm, proto, kdata, nconst);
+        if (kdata) { be_free(vm, kdata, nconst * sizeof(bvalue)); }
+    }
+#else
     proto->ktab = be_vector_release(vm, &finfo->kvec);
     proto->nconst = be_vector_count(&finfo->kvec);
+#endif
     proto->ptab = be_vector_release(vm, &finfo->pvec);
     proto->nproto = be_vector_count(&finfo->pvec);
 #if BE_USE_MEM_ALIGNED
     proto->code = be_move_to_aligned(vm, proto->code, proto->codesize * sizeof(binstruction));     /* move `code` to 4-bytes aligned memory region */
+#if !BE_USE_COMPACT_KTAB
     proto->ktab = be_move_to_aligned(vm, proto->ktab, proto->nconst * sizeof(bvalue));     /* move `ktab` to 4-bytes aligned memory region */
+#endif
 #endif /* BE_USE_MEM_ALIGNED */
 #if BE_DEBUG_RUNTIME_INFO
     proto->lineinfo = be_vector_release(vm, &finfo->linevec);     /* move `lineinfo` to 4-bytes aligned memory region */
@@ -965,18 +987,24 @@ static void suffix_alloc_reg(bparser *parser, bexpdesc *l)
 static void compound_assign(bparser *parser, int op, bexpdesc *l, bexpdesc *r)
 {
     int dst = -1;  /* destination register in case of compound assignment */
+    bexpdesc e;
     if (op != OptAssign) { /* check left variable */
         check_var(parser, l);
         /* cache the register of the object when continuously assigning */
         dst = parser->finfo->freereg;
         suffix_alloc_reg(parser, l);
+        e = *l;
+        op = op < OptAndAssign ? op - OptAddAssign + OptAdd
+                : op - OptAndAssign + OptBitAnd;
+        /* Materialize the left operand here, before the right one is parsed,
+         * the way sub_expr() does it through be_code_prebinop(). Otherwise the
+         * code that loads it is emitted from binaryexp() below, by then the
+         * right side has opened its jump list, and the load lands inside it. */
+        be_code_prebinop(parser->finfo, op, &e, dst);
     }
     expr(parser, r); /* right expression */
     check_var(parser, r);
     if (op != OptAssign) { /* compound assignment */
-        bexpdesc e = *l;
-        op = op < OptAndAssign ? op - OptAddAssign + OptAdd
-                : op - OptAndAssign + OptBitAnd;
         be_code_binop(parser->finfo, op, &e, r, dst); /* coding operation */
         *r = e;
     }
@@ -1078,7 +1106,9 @@ static void cond_expr(bparser *parser, bexpdesc *e)
 static void sub_expr(bparser *parser, bexpdesc *e, int prio)
 {
     bfuncinfo *finfo = parser->finfo;
-    btokentype op = get_unary_op(parser);  /* check if first token in unary op */
+    btokentype op;
+    enter_recursion(parser);
+    op = get_unary_op(parser);  /* check if first token in unary op */
     if (op != OP_NOT_UNARY) {  /* unary op found */
         int line, res;
         scan_next_token(parser);  /* move to next token */
@@ -1099,7 +1129,7 @@ static void sub_expr(bparser *parser, bexpdesc *e, int prio)
         bexpdesc e2;
         check_var(parser, e);  /* check that left part is valid */
         scan_next_token(parser);  /* move to next token */
-        be_code_prebinop(finfo, op, e); /* and or */
+        be_code_prebinop(finfo, op, e, -1); /* and or */
         if (op == OptConnect) {
             parser->finfo->binfo->sideeffect = 1;
         }
@@ -1116,6 +1146,7 @@ static void sub_expr(bparser *parser, bexpdesc *e, int prio)
     if (prio == ASSIGN_OP_PRIO) {
         cond_expr(parser, e);
     }
+    leave_recursion(parser);
 }
 
 static void walrus_expr(bparser *parser, bexpdesc *e)
@@ -1124,19 +1155,37 @@ static void walrus_expr(bparser *parser, bexpdesc *e)
     sub_expr(parser, e, ASSIGN_OP_PRIO);    /* left expression */
     btokentype op = next_type(parser);
     if (op == OptWalrus) {
+        bfuncinfo *finfo = parser->finfo;
+        int base;
         check_symbol(parser, e);
+        /* ':=' only assigns an existing variable, it never creates one (neither
+         * local nor global, nor a local shadowing a builtin). A new local would
+         * take the register right above the other locals, which may still hold
+         * a temporary of the enclosing expression, and an implicit global is an
+         * easy way to hide a typo. */
+        if (e->type == ETVOID ||
+            (e->type == ETGLOBAL && e->v.idx < be_builtin_count(parser->vm))) {
+            bstring *name = (e->type == ETVOID) ? e->v.s : be_builtin_name(parser->vm, e->v.idx);
+            parser->lexer.linenumber = line;
+            push_error(parser, "cannot create variable '%s' with ':=', "
+                "declare it with 'var' first", str(name));
+        }
         bexpdesc e1 = *e;           /* copy var to e1, e will get the result of expression */
         parser->finfo->binfo->sideeffect = 1;   /* has side effect */
         scan_next_token(parser);    /* skip ':=' */
+        base = finfo->freereg;      /* registers below are still in use by the enclosing expression */
         expr(parser, e);
         check_var(parser, e);
-        if (check_newvar(parser, &e1)) { /* new variable */
-            new_var(parser, e1.v.s, &e1);
-        }
         if (be_code_setvar(parser->finfo, &e1, e, btrue /* do not release register */ )) {
             parser->lexer.linenumber = line;
             parser_error(parser,
                 "try to assign constant expressions.");
+        }
+        if (e1.type == ETLOCAL && e->type == ETLOCAL && finfo->freereg > base) {
+            /* the value is now held by the local variable: release the temporary
+             * registers used by the right side, e.g. the object of `l[i]`.
+             * `:=` never creates a local, so `base` is never below the locals */
+            finfo->freereg = (bbyte)base;
         }
     }
 }
@@ -1271,14 +1320,14 @@ static void for_iter(bparser *parser, bstring *var, bexpdesc *it)
     stmtlist(parser);
 }
 
-static void for_leave(bparser *parser, int jcatch, int beginpc)
+static void for_leave(bparser *parser, int jcatch)
 {
     bexpdesc e;
     bfuncinfo *finfo = parser->finfo;
     int jbrk = finfo->binfo->breaklist;
     init_exp(&e, ETSTRING, 0);
     e.v.s = parser_newstr(parser, "stop_iteration");
-    end_block_ex(parser, beginpc); /* leave except & loop block */
+    end_block(parser); /* leave except & loop block */
     if (jbrk != NO_JUMP) { /* has `break` statement in iteration block */
         be_code_exblk(finfo, 1);
         jbrk = be_code_jump(finfo);
@@ -1305,7 +1354,7 @@ static void for_stmt(bparser *parser)
     bstring *var;
     bexpdesc iter;
     bblockinfo binfo;
-    int jcatch, beginpc = parser->finfo->pc;
+    int jcatch;
     /* FOR ID : expr block END */
     scan_next_token(parser); /* skip 'for' */
     begin_block(parser->finfo, &binfo, BLOCK_EXCEPT | BLOCK_LOOP);
@@ -1314,7 +1363,7 @@ static void for_stmt(bparser *parser)
     for_init(parser, &iter);
     jcatch = be_code_exblk(parser->finfo, 0);
     for_iter(parser, var, &iter);
-    for_leave(parser, jcatch, beginpc);
+    for_leave(parser, jcatch);
     match_token(parser, KeyEnd); /* skip 'end' */
 }
 
@@ -1807,9 +1856,11 @@ static void stmtlist(bparser *parser)
 static void block(bparser *parser, int type)
 {
     bblockinfo binfo;
+    enter_recursion(parser);
     begin_block(parser->finfo, &binfo, type);
     stmtlist(parser);
     end_block(parser);
+    leave_recursion(parser);
 }
 
 static void mainfunc(bparser *parser, bclosure *cl)
@@ -1835,6 +1886,7 @@ bclosure* be_parser_source(bvm *vm,
     parser.finfo = NULL;
     parser.cl = cl;
     parser.islocal = (bbyte)islocal;
+    parser.depth = 0;
     var_setclosure(vm->top, cl);
     be_stackpush(vm);
     be_lexer_init(&parser.lexer, vm, fname, reader, data);

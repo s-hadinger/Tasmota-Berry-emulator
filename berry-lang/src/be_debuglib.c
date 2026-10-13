@@ -108,9 +108,17 @@ static int m_caller(bvm *vm)
 {
     int depth = 1;
     if (be_top(vm) >= 1 && be_isint(vm, 1)) {
-        depth = be_toint(vm, 1);
-        if (depth < 0) {
-            depth = -depth;         /* take absolute value */
+        int d = be_toint(vm, 1);
+        int count = be_stack_count(&vm->callstack);
+        /* clamp |d| to the live frame count. Comparing d against -count
+         * first lets us safely negate only values that fit, avoiding the
+         * -INT_MIN sign-flip undefined behavior. */
+        if (d < -count || d > count) {
+            depth = count;
+        } else if (d < 0) {
+            depth = -d;
+        } else {
+            depth = d;
         }
     }
     bcallframe *cf = (bcallframe*)be_stack_top(&vm->callstack) - depth;
@@ -240,6 +248,29 @@ static int m_reallocs(bvm *vm) {
 #endif
 }
 
+#if !BE_USE_PRECOMPILED_OBJECT
+be_native_module_attr_table(debug) {
+    be_native_module_function("attrdump", m_attrdump),
+    be_native_module_function("codedump", m_codedump),
+    be_native_module_function("traceback", m_traceback),
+#if BE_USE_DEBUG_HOOK
+    be_native_module_function("sethook", m_sethook),
+#endif
+#if BE_USE_PERF_COUNTERS
+    be_native_module_function("counters", m_counters),
+#endif
+    be_native_module_function("calldepth", m_calldepth),
+    be_native_module_function("top", m_top),
+#if BE_DEBUG_VAR_INFO
+    be_native_module_function("varname", m_varname),
+    be_native_module_function("upvname", m_upvname),
+#endif
+    be_native_module_function("caller", m_caller),
+    be_native_module_function("gcdebug", m_gcdebug)
+};
+
+be_define_native_module(debug, NULL);
+#else
 /* @const_object_info_begin
 module debug (scope: global, depend: BE_USE_DEBUG_MODULE) {
     attrdump, func(m_attrdump)
@@ -261,5 +292,6 @@ module debug (scope: global, depend: BE_USE_DEBUG_MODULE) {
 }
 @const_object_info_end */
 #include "../generate/be_fixed_debug.h"
+#endif
 
 #endif /* BE_USE_DEBUG_MODULE */

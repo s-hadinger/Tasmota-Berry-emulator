@@ -28,7 +28,7 @@ ifeq ($(BUILD_MODE), emsdk)
     CC       := emcc
     # Export JavaScript-to-Berry execution API functions
     # NO_EXIT_RUNTIME=1 keeps the runtime alive after main() exits so we can call berry_execute later
-    LFLAGS   := -s WASM=0 -s ASYNCIFY -s 'ASYNCIFY_IMPORTS=["_js_readbuffer"]' -s NO_EXIT_RUNTIME=1 \
+    LFLAGS   := -s WASM=1 -s SINGLE_FILE=1 -s ASYNCIFY -s 'ASYNCIFY_IMPORTS=["_js_readbuffer"]' -s NO_EXIT_RUNTIME=1 \
                 -s 'EXPORTED_FUNCTIONS=["_main","_berry_execute","_berry_execute_result","_berry_call_global","_berry_call_global_args","_berry_get_global","_berry_set_global","_berry_set_vm","_tasmota_millis","_malloc","_free"]' \
                 -s 'EXPORTED_RUNTIME_METHODS=["ccall","cwrap","UTF8ToString","stringToUTF8","lengthBytesUTF8"]'
     # Use default config for emsdk unless PLATFORM_DIR is specified

@@ -1,0 +1,21 @@
+[flake8]
+extend-exclude =
+  ./.*,
+  ./binaryen,
+  ./ccache,
+  ./clang,
+  ./crunch,
+  ./downloads,
+  ./emscripten,
+  ./fastcomp-clang,
+  ./fastcomp,
+  ./git,
+  ./gnu,
+  ./llvm,
+  ./node,
+  ./python,
+  ./releases,
+  ./temp,
+  ./upstream,
+
+max-line-length = 160

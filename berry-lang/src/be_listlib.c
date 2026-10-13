@@ -294,15 +294,15 @@ static int iter_closure(bvm *vm)
      * directly without using by the stack. */
     bntvclos *func = var_toobj(vm->cf->func);
     bvalue *uv0 = be_ntvclos_upval(func, 0)->value; /* list value */
-    bvalue *uv1 = be_ntvclos_upval(func, 1)->value; /* iter value */
-    bvalue *next = cast(bvalue*, var_toobj(uv1)) + 1;
+    bvalue *uv1 = be_ntvclos_upval(func, 1)->value; /* iter value (index) */
+    bint idx = var_toint(uv1) + 1;
     blist *list = var_toobj(uv0);
-    if (next >= be_list_end(list)) {
+    if (idx >= be_list_count(list)) {
         be_stop_iteration(vm);
     }
-    var_toobj(uv1) = next; /* set upvale[1] (iter value) */
+    var_setint(uv1, idx); /* set upvalue[1] (iter index) */
     /* push next value to top */
-    var_setval(vm->top, next);
+    var_setval(vm->top, be_list_at(list, idx));
     be_incrtop(vm);
     be_return(vm);
 }
@@ -312,7 +312,7 @@ static int m_iter(bvm *vm)
     be_pushntvclosure(vm, iter_closure, 2);
     be_getmember(vm, 1, ".p");
     be_setupval(vm, -2, 0);
-    be_pushiter(vm, -1);
+    be_pushint(vm, -1); /* start index before first element */
     be_setupval(vm, -3, 1);
     be_pop(vm, 2);
     be_return(vm);
@@ -493,6 +493,38 @@ static int m_nequal(bvm *vm)
     return list_equal(vm, bfalse);
 }
 
+#if !BE_USE_PRECOMPILED_OBJECT
+void be_load_listlib(bvm *vm)
+{
+    static const bnfuncinfo members[] = {
+        { ".p", NULL },
+        { "init", m_init },
+        { "tostring", m_tostring },
+        { "push", m_push },
+        { "pop", m_pop },
+        { "insert", m_insert },
+        { "remove", m_remove },
+        { "item", m_item },
+        { "find", m_find },
+        { "setitem", m_setitem },
+        { "size", m_size },
+        { "resize", m_resize },
+        { "clear", m_clear },
+        { "iter", m_iter },
+        { "concat", m_concat },
+        { "reverse", m_reverse },
+        { "copy", m_copy },
+        { "keys", m_keys },
+        { "tobool", m_tobool },
+        { "..", m_connect },
+        { "+", m_merge },
+        { "==", m_equal },
+        { "!=", m_nequal },
+        { NULL, NULL }
+    };
+    be_regclass(vm, "list", members);
+}
+#else
 /* @const_object_info_begin
 class be_class_list (scope: global, name: list) {
     .p, var
@@ -521,3 +553,4 @@ class be_class_list (scope: global, name: list) {
 }
 @const_object_info_end */
 #include "../generate/be_fixed_be_class_list.h"
+#endif

@@ -211,6 +211,57 @@
  **/
 #define BE_USE_MEM_ALIGNED               0
 
+/* Macro: BE_USE_PREPROCESSOR
+ * Enable the preprocessor for conditional compilation
+ * (#if/#else/#elif/#endif/#define/#undef) and translatable
+ * string expressions ("text"#MACRO). Set to 0 to exclude
+ * all preprocessor code from compilation.
+ * Disabled in the emulator to match Tasmota firmwares behavior.
+ * Default: 1
+ **/
+#define BE_USE_PREPROCESSOR             0
+
+/* Macro: BE_PREPROC_MAX_DEPTH
+ * Maximum nesting depth for preprocessor conditional blocks.
+ * Only used when BE_USE_PREPROCESSOR is enabled.
+ * Default: 8
+ **/
+#define BE_PREPROC_MAX_DEPTH            8
+
+/* Macro: BE_MAX_PARSER_DEPTH
+ * Hard limit on parser recursion depth (nested expressions and blocks).
+ * Each level costs ~hundreds of bytes of native C stack, so this protects
+ * pathological source from overflowing the C stack at compile time.
+ * Stored in a bbyte, so values above 255 are clamped.
+ * Default: 25
+ **/
+#define BE_MAX_PARSER_DEPTH             25
+
+/* Macro: BE_USE_COMPACT_KTAB
+ * Store each function's constant table (ktab) as a structure-of-arrays:
+ * a payload-word array (`union bvaldata`) plus a parallel type-byte
+ * array, instead of an array of full `bvalue`. Constants are
+ * materialized into a scratch value on access.
+ * Same value as Tasmota.
+ * Default: 0 (disabled)
+ **/
+#ifndef BE_USE_COMPACT_KTAB
+#define BE_USE_COMPACT_KTAB             1
+#endif
+
+/* Macro: BE_USE_COMPACT_MAP
+ * Store the nodes of *constant* (solidified/flash) maps in a packed
+ * layout instead of the regular `bmapnode`. Only read-only (const)
+ * maps use the packed layout.
+ * NOTE: changing this flag changes the layout of every const map emitted by
+ * `coc` and by solidify, so the generated headers must be regenerated.
+ * Same value as Tasmota.
+ * Default: 0 (disabled)
+ **/
+#ifndef BE_USE_COMPACT_MAP
+#define BE_USE_COMPACT_MAP              1
+#endif
+
 /* Macro: BE_USE_XXX_MODULE
  * These macros control whether the related module is compiled.
  * When they are true, they will enable related modules. At this

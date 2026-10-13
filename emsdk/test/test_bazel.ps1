@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 
 Set-Location bazel
 
@@ -6,6 +7,9 @@ bazel build //hello-world:hello-world-wasm
 if (-not $?) { Exit $LastExitCode }
 
 bazel build //hello-world:hello-world-wasm-simd
+if (-not $?) { Exit $LastExitCode }
+
+bazel build //hello-world:hello-world-wasm-relaxed-simd
 if (-not $?) { Exit $LastExitCode }
 
 Set-Location test_external
@@ -28,3 +32,7 @@ Set-Location ..\test_secondary_lto_cache
 bazel build //:hello-world-wasm
 if (-not $?) { Exit $LastExitCode }
 
+Set-Location ..\test_prebuilt_cache
+
+bazel build //:hello-world-wasm --compilation_mode opt # test only release as used prebuilt cache is only for release builds
+if (-not $?) { Exit $LastExitCode }

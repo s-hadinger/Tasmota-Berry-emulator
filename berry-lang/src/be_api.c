@@ -80,10 +80,17 @@ BERRY_API void be_regfunc(bvm *vm, const char *name, bntvfunc f)
 {
     bvalue *var;
     bstring *s = be_newstr(vm, name);
+#if !BE_USE_PRECOMPILED_OBJECT
+    int idx = be_builtin_find(vm, s);
+    be_assert(idx < 0);
+    if (idx < 0) { /* new function */
+        idx = be_builtin_new(vm, s);
+#else
     int idx = be_global_find(vm, s);
     be_assert(idx < be_builtin_count(vm));
     if (idx < be_builtin_count(vm)) { /* new function */
         idx = be_global_new(vm, s);
+#endif
         var = be_global_var(vm, idx);
         var_setntvfunc(var, f);
     } /* error case, do nothing */
@@ -93,10 +100,17 @@ BERRY_API void be_regclass(bvm *vm, const char *name, const bnfuncinfo *lib)
 {
     bvalue *var;
     bstring *s = be_newstr(vm, name);
+#if !BE_USE_PRECOMPILED_OBJECT
+    int idx = be_builtin_find(vm, s);
+    be_assert(idx < 0);
+    if (idx < 0) { /* new function */
+        idx = be_builtin_new(vm, s);
+#else
     int idx = be_global_find(vm, s);
     be_assert(idx < be_builtin_count(vm));
     if (idx < be_builtin_count(vm)) { /* new function */
         idx = be_global_new(vm, s);
+#endif
         var = be_global_var(vm, idx);
         var_setclass(var, class_auto_make(vm, s, lib));
     } /* error case, do nothing */
@@ -899,31 +913,30 @@ BERRY_API bbool be_pushiter(bvm *vm, int index)
         var_setobj(iter, BE_COMPTR, NULL);
         return btrue;
     } else if (var_islist(v)) {
-        blist *list = var_toobj(v);
         bvalue *iter = be_incrtop(vm);
-        var_setobj(iter, BE_COMPTR, be_list_data(list) - 1);
+        var_setint(iter, -1); /* index-based: start before first element */
         return btrue;
     }
     return bfalse;
 }
 
-static int list_next(bvm *vm)
+static int list_next(bvm *vm, bvalue *v)
 {
     bvalue *iter = be_indexof(vm, -1);
-    bvalue *next, *dst = be_incrtop(vm);
-    next = cast(bvalue*, var_toobj(iter)) + 1;
-    var_setobj(iter, BE_COMPTR, next);
-    var_setval(dst, next);
+    bint idx = var_toint(iter) + 1;
+    blist *list = var_toobj(v);
+    var_setint(iter, idx);
+    bvalue *dst = be_incrtop(vm);
+    var_setval(dst, be_list_at(list, idx));
     return 1;
 }
 
 static bbool list_hasnext(bvm *vm, bvalue *v)
 {
-    bvalue *next;
     bvalue *iter = be_indexof(vm, -1);
     blist *obj = var_toobj(v);
-    next = cast(bvalue*, var_toobj(iter)) + 1;
-    return next >= be_list_data(obj) && next < be_list_end(obj);
+    bint idx = var_toint(iter) + 1;
+    return idx >= 0 && idx < be_list_count(obj);
 }
 
 static int map_next(bvm *vm, bvalue *v)
@@ -955,7 +968,7 @@ BERRY_API int be_iter_next(bvm *vm, int index)
 {
     bvalue *o = be_indexof(vm, index);
     if (var_islist(o)) {
-        return list_next(vm);
+        return list_next(vm, o);
     } else if (var_ismap(o)) {
         return map_next(vm, o);
     }

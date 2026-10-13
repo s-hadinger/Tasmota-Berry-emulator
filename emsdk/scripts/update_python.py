@@ -26,11 +26,11 @@ import glob
 import multiprocessing
 import os
 import platform
-import urllib.request
 import shutil
-import subprocess
 import sys
+import urllib.request
 from subprocess import check_call
+
 from zip import unzip_cmd, zip_cmd
 
 version = '3.13.3'
@@ -68,7 +68,7 @@ def make_python_patch():
         urllib.request.urlretrieve(download_url, filename)
 
     os.mkdir('python-nuget')
-    check_call(unzip_cmd() + [os.path.abspath(filename)], cwd='python-nuget')
+    check_call([*unzip_cmd(), os.path.abspath(filename)], cwd='python-nuget')
     os.remove(filename)
 
     src_dir = os.path.join('python-nuget', 'tools')
@@ -77,18 +77,18 @@ def make_python_patch():
     check_call([python_exe, '-m', 'pip', 'install', 'pywin32==310', '--no-warn-script-location'])
     check_call([python_exe, '-m', 'pip', 'install', PSUTIL])
 
-    check_call(zip_cmd() + [os.path.join('..', '..', out_filename), '.'], cwd=src_dir)
-    print('Created: %s' % out_filename)
+    check_call([*zip_cmd(), os.path.join('..', '..', out_filename), '.'], cwd=src_dir)
+    print(f'Created: {out_filename}')
 
     # cleanup if everything went fine
     shutil.rmtree('python-nuget')
 
     if '--upload' in sys.argv:
-      upload_url = upload_base + out_filename
-      print('Uploading: ' + upload_url)
-      cmd = ['gsutil', 'cp', '-n', out_filename, upload_url]
-      print(' '.join(cmd))
-      check_call(cmd)
+        upload_url = upload_base + out_filename
+        print('Uploading: ' + upload_url)
+        cmd = ['gsutil', 'cp', '-n', out_filename, upload_url]
+        print(' '.join(cmd))
+        check_call(cmd)
 
 
 def build_python():
@@ -99,10 +99,8 @@ def build_python():
         check_call(['brew', 'install', 'openssl', 'xz', 'pkg-config'])
         if platform.machine() == 'x86_64':
             prefix = '/usr/local'
-            min_macos_version = '11.0'
         elif platform.machine() == 'arm64':
             prefix = '/opt/homebrew'
-            min_macos_version = '11.0'
 
         # Append '-x86_64' or '-arm64' depending on current arch. (TODO: Do
         # this for Linux too, move this below?)
@@ -121,23 +119,24 @@ def build_python():
 
     src_dir = 'cpython'
     if os.path.exists(src_dir):
-      check_call(['git', 'fetch'], cwd=src_dir)
+        check_call(['git', 'fetch'], cwd=src_dir)
     else:
-      check_call(['git', 'clone', 'https://github.com/python/cpython'])
+        check_call(['git', 'clone', 'https://github.com/python/cpython'])
     check_call(['git', 'checkout', 'v' + version], cwd=src_dir)
 
     env = os.environ
     if sys.platform.startswith('darwin'):
-      # Specify the min OS version we want the build to work on
-      min_macos_version_line = '-mmacosx-version-min=' + min_macos_version
-      build_flags = min_macos_version_line + ' -Werror=partial-availability'
-      # Build against latest SDK, but issue an error if using any API that would not work on the min OS version
-      env = env.copy()
-      env['MACOSX_DEPLOYMENT_TARGET'] = min_macos_version
-      configure_args = ['CFLAGS=' + build_flags, 'CXXFLAGS=' + build_flags, 'LDFLAGS=' + min_macos_version_line]
+        # Specify the min OS version we want the build to work on
+        min_macos_version = '11.0'
+        min_macos_version_line = '-mmacosx-version-min=' + min_macos_version
+        build_flags = min_macos_version_line + ' -Werror=partial-availability'
+        # Build against latest SDK, but issue an error if using any API that would not work on the min OS version
+        env = env.copy()
+        env['MACOSX_DEPLOYMENT_TARGET'] = min_macos_version
+        configure_args = ['CFLAGS=' + build_flags, 'CXXFLAGS=' + build_flags, 'LDFLAGS=' + min_macos_version_line]
     else:
-      configure_args = []
-    check_call(['./configure'] + configure_args, cwd=src_dir, env=env)
+        configure_args = []
+    check_call(['./configure', *configure_args], cwd=src_dir, env=env)
     check_call(['make', '-j', str(multiprocessing.cpu_count())], cwd=src_dir, env=env)
     check_call(['make', 'install', 'DESTDIR=install'], cwd=src_dir, env=env)
 
@@ -154,22 +153,22 @@ def build_python():
     # process quits.
     check_call([pybin, pip, 'install', PSUTIL])
 
-    dirname = 'python-%s-%s' % (version, revision)
+    dirname = f'python-{version}-{revision}'
     if os.path.isdir(dirname):
         print('Erasing old build directory ' + dirname)
         shutil.rmtree(dirname)
     os.rename(os.path.join(install_dir, 'usr', 'local'), dirname)
-    tarball = 'python-%s-%s-%s.tar.gz' % (version, revision, osname)
+    tarball = f'python-{version}-{revision}-{osname}.tar.gz'
     shutil.rmtree(os.path.join(dirname, 'lib', 'python' + major_minor_version, 'test'))
     shutil.rmtree(os.path.join(dirname, 'include'))
     for lib in glob.glob(os.path.join(dirname, 'lib', 'lib*.a')):
         os.remove(lib)
     check_call(['tar', 'zcvf', tarball, dirname])
 
-    print('Created: %s' % tarball)
+    print(f'Created: {tarball}')
     if '--upload' in sys.argv:
-      print('Uploading: ' + upload_base + tarball)
-      check_call(['gsutil', 'cp', '-n', tarball, upload_base + tarball])
+        print('Uploading: ' + upload_base + tarball)
+        check_call(['gsutil', 'cp', '-n', tarball, upload_base + tarball])
 
 
 def main():
@@ -181,4 +180,4 @@ def main():
 
 
 if __name__ == '__main__':
-  sys.exit(main())
+    sys.exit(main())

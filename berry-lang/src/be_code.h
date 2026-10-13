@@ -13,7 +13,7 @@
 #define be_code_freeregs(f, n)      ((f)->freereg -= (bbyte)(n))
 
 int be_code_allocregs(bfuncinfo *finfo, int count);
-void be_code_prebinop(bfuncinfo *finfo, int op, bexpdesc *e);
+void be_code_prebinop(bfuncinfo *finfo, int op, bexpdesc *e, int dst);
 void be_code_binop(bfuncinfo *finfo, int op, bexpdesc *e1, bexpdesc *e2, int dst);
 int be_code_unop(bfuncinfo *finfo, int op, bexpdesc *e);
 int be_code_setvar(bfuncinfo *finfo, bexpdesc *e1, bexpdesc *e2, bbool keep_reg);
@@ -31,7 +31,7 @@ void be_code_closure(bfuncinfo *finfo, bexpdesc *e, int idx);
 void be_code_close(bfuncinfo *finfo, int isret);
 void be_code_class(bfuncinfo *finfo, bexpdesc *dst, bclass *c);
 void be_code_ret(bfuncinfo *finfo, bexpdesc *e);
-int be_code_nglobal(bfuncinfo *finfo, bexpdesc *k);
+int be_code_resolve(bfuncinfo *finfo, bexpdesc *k);
 void be_code_member(bfuncinfo *finfo, bexpdesc *e1, bexpdesc *e2);
 void be_code_index(bfuncinfo *finfo, bexpdesc *c, bexpdesc *k);
 void be_code_setsuper(bfuncinfo *finfo, bexpdesc *c, bexpdesc *s);

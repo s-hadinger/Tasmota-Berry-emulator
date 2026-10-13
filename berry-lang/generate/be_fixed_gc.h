@@ -1,8 +1,8 @@
 #include "be_constobj.h"
 
 static be_define_const_map_slots(m_libgc_map) {
-    { be_const_key(allocated, -1), be_const_func(m_allocated) },
-    { be_const_key(collect, -1), be_const_func(m_collect) },
+    { be_ckey(allocated, -1), be_ckv_func(m_allocated) },
+    { be_ckey(collect, -1), be_ckv_func(m_collect) },
 };
 
 static be_define_const_map(

@@ -1,8 +1,8 @@
 #include "be_constobj.h"
 
 static be_define_const_map_slots(m_libjson_map) {
-    { be_const_key(dump, -1), be_const_func(m_json_dump) },
-    { be_const_key(load, 0), be_const_func(m_json_load) },
+    { be_ckey(dump, -1), be_ckv_func(m_json_dump) },
+    { be_ckey(load, 0), be_ckv_func(m_json_load) },
 };
 
 static be_define_const_map(

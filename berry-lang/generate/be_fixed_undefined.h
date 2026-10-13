@@ -1,7 +1,7 @@
 #include "be_constobj.h"
 
 static be_define_const_map_slots(m_libundefined_map) {
-    { be_const_key(_X2Ep, -1), be_const_nil() },
+    { be_ckey(_X2Ep, -1), be_ckv_nil() },
 };
 
 static be_define_const_map(

@@ -1,17 +1,17 @@
 #include "be_constobj.h"
 
 static be_define_const_map_slots(m_libintrospect_map) {
-    { be_const_key(fromptr, 9), be_const_func(m_fromptr) },
-    { be_const_key(set, 8), be_const_func(m_setmember) },
-    { be_const_key(name, 10), be_const_func(m_name) },
-    { be_const_key(setmodule, -1), be_const_func(m_setmodule) },
-    { be_const_key(module, -1), be_const_func(m_getmodule) },
-    { be_const_key(get, 7), be_const_func(m_findmember) },
-    { be_const_key(ismethod, -1), be_const_func(m_ismethod) },
-    { be_const_key(toptr, -1), be_const_func(m_toptr) },
-    { be_const_key(solidified, -1), be_const_func(m_solidified) },
-    { be_const_key(members, -1), be_const_func(m_attrlist) },
-    { be_const_key(contains, -1), be_const_func(m_contains) },
+    { be_ckey(fromptr, 9), be_ckv_func(m_fromptr) },
+    { be_ckey(set, 8), be_ckv_func(m_setmember) },
+    { be_ckey(name, 10), be_ckv_func(m_name) },
+    { be_ckey(setmodule, -1), be_ckv_func(m_setmodule) },
+    { be_ckey(module, -1), be_ckv_func(m_getmodule) },
+    { be_ckey(get, 7), be_ckv_func(m_findmember) },
+    { be_ckey(ismethod, -1), be_ckv_func(m_ismethod) },
+    { be_ckey(toptr, -1), be_ckv_func(m_toptr) },
+    { be_ckey(solidified, -1), be_ckv_func(m_solidified) },
+    { be_ckey(members, -1), be_ckv_func(m_attrlist) },
+    { be_ckey(contains, -1), be_ckv_func(m_contains) },
 };
 
 static be_define_const_map(
