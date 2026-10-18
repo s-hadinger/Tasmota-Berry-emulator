@@ -1,0 +1,165 @@
+# @desc Lava-lamp warm glow for a dinner with friends: golden and red blobs wandering randomly over a red/amber background
+#
+# Designed for a 66-LED strip under the top of a sideboard (oak + grey doors).
+# Movement is slow, irregular and low contrast so it stays discreet.
+#
+# Every moving value follows smooth random noise: random waypoints joined by
+# eased curves, mixed with a weaker second layer of noise. Blobs drift, slow
+# down, hesitate, change direction and fade in and out at irregular times,
+# like wax in a lava lamp.
+#
+# Rendering is done by a small custom animation with sub-pixel precision:
+# blob positions and the background shift are fractional, so slow movements
+# glide smoothly instead of jumping one LED at a time.
+#
+# Layers:
+#   1. Red / amber palette background, sloshing randomly along the strip
+#   2. Irregular, gentle breathing of the background (80% to 100%)
+#   3. Lava blobs: golden and red blobs wandering and fading at random
+
+# Base palette, looped (first color = last color) so the background has no seam
+palette dinner_lava = [
+  (0,   0xD03C1A)   # Red
+  (60,  0xF57A2C)   # Orange red
+  (110, 0xFF9030)   # Amber
+  (150, 0xEC6432)   # Coral red
+  (205, 0xB02E14)   # Deep red
+  (255, 0xD03C1A)   # Red (loop back)
+]
+
+berry """
+import math
+
+# Pseudo-random value in 0.0..1.0 for lattice point 'k' (deterministic per seed)
+def _lava_hash(seed, k)
+  var x = (k * 1103515245 + seed * 2654435 + 0x5bd1e995) & 0x7FFFFFFF
+  x = ((x >> 13) ^ x) & 0x7FFFFFFF
+  x = (x * 1103515245 + 12345) & 0x7FFFFFFF
+  return ((x >> 8) & 0xFFFF) / 65535.0
+end
+
+# One layer of smooth value noise: a random waypoint every 'step' ms,
+# joined with smoothstep easing (slows down near each waypoint)
+def _lava_octave(seed, t, step)
+  var k = t / step
+  var f = real(t % step) / step
+  f = f * f * (3 - 2 * f)
+  var a = _lava_hash(seed, k)
+  return a + (_lava_hash(seed, k + 1) - a) * f
+end
+
+# Smooth random value (real) between 'lo' and 'hi', new waypoint every 'step' ms
+# - main layer (80%) for the slow drift, second layer (20%) for a light wobble
+# - stretched by 1.3 and clamped so values regularly reach the ends and
+#   rest there for a moment, like wax resting at the bottom of the lamp
+def _lava_noise(seed, lo, hi, step, t)
+  var n = 0.8 * _lava_octave(seed, t, step) + 0.2 * _lava_octave(seed + 101, t, step / 2)
+  n = (n - 0.5) * 1.3 + 0.5
+  if n < 0 n = 0 end
+  if n > 1 n = 1 end
+  return lo + (hi - lo) * n
+end
+
+# Mix two RGB colors, 'a' in 0.0..1.0 (0 = c0, 1 = c1), result is opaque ARGB
+def _lava_mix(c0, c1, a)
+  var r0 = (c0 >> 16) & 0xFF   var g0 = (c0 >> 8) & 0xFF   var b0 = c0 & 0xFF
+  var r = int(r0 + (((c1 >> 16) & 0xFF) - r0) * a + 0.5)
+  var g = int(g0 + (((c1 >> 8) & 0xFF) - g0) * a + 0.5)
+  var b = int(b0 + ((c1 & 0xFF) - b0) * a + 0.5)
+  return 0xFF000000 | (r << 16) | (g << 8) | b
+end
+
+class lava_lamp_anim : animation.animation
+  var src       # rich_palette_color used as a lookup table for the background
+  var blobs     # list of blob descriptions, see below
+  var speed     # global speed factor: 1.0 = reference, 1.5 = 50% faster
+
+  def init(engine, colors)
+    super(self).init(engine)
+    var s = animation.rich_palette_color(engine)
+    s.colors = colors
+    s.period = 0
+    s.transition_type = animation.SINE
+    self.src = s
+    self.speed = 1.5
+    # Each blob, drawn in this order (last one on top):
+    #   [color, core_radius, soft_edge,
+    #    pos_seed, center_min, center_max, pos_step_ms,
+    #    opacity_seed, opacity_min, opacity_max, opacity_step_ms]
+    # (step_ms values are for speed 1.0, they are divided by 'speed')
+    self.blobs = [
+      [0xD84422, 3.0, 12.0, 41, 3.0, 59.0, 18000, 42,  60, 150, 14000],  # wide red
+      [0xA82A12, 2.5,  9.0, 31, 6.5, 58.5, 12000, 32,  80, 180, 11000],  # deep red "wax"
+      [0xFFE4BC, 1.0,  8.0, 21, 5.0, 63.0, 11000, 22, 110, 225, 12000],  # pale cream
+      [0xFFDA9C, 2.0, 10.0, 11, 2.0, 60.0, 14000, 12, 140, 240, 10000],  # light gold
+    ]
+  end
+
+  # Smooth random value, with the waypoint spacing scaled by 'speed'
+  def noise(seed, lo, hi, step, t)
+    return _lava_noise(seed, lo, hi, int(step / self.speed), t)
+  end
+
+  def render(frame, time_ms, strip_length)
+    var t = self.engine.time_ms
+    var src = self.src
+    src.update(t)               # make sure the palette LUT is built
+    var pixels = frame.pixels
+
+    # 1. Background: palette spread over the strip, shifted by a fractional
+    #    amount; colors are interpolated between LUT entries (2 values apart)
+    var shift = self.noise(1, 0, 256, 20000, t)            # in palette units
+    var breath = self.noise(2, 205, 255, 10000, t) / 255.0
+    var scale = 256.0 / strip_length
+    var i = 0
+    while i < strip_length
+      var v = i * scale + shift
+      var v0 = int(v / 2) * 2
+      var frac = (v - v0) / 2
+      var c0 = src.get_color_for_value(v0 % 256, 0)
+      var c1 = src.get_color_for_value((v0 + 2) % 256, 0)
+      var c = _lava_mix(c0, c1, frac)
+      c = _lava_mix(0xFF000000, c, breath)
+      pixels.set(i << 2, c, 4)
+      i += 1
+    end
+
+    # 2. Blobs: raised-cosine soft edges around a fractional center
+    for b : self.blobs
+      var core = b[1]
+      var soft = b[2]
+      var center = self.noise(b[3], b[4], b[5], b[6], t)
+      var alpha = self.noise(b[7], b[8], b[9], b[10], t) / 255.0
+      var reach = core + soft
+      var p0 = int(center - reach)
+      var p1 = int(center + reach) + 1
+      if p0 < 0 p0 = 0 end
+      if p1 > strip_length p1 = strip_length end
+      var p = p0
+      while p < p1
+        var d = math.abs(p - center)
+        var w = 1.0
+        if d > core
+          w = 0.5 * (1 + math.cos(math.pi * (d - core) / soft))
+          if d >= reach w = 0 end
+        end
+        if w > 0
+          var off = p << 2
+          pixels.set(off, _lava_mix(pixels.get(off, 4), b[0], w * alpha), 4)
+        end
+        p += 1
+      end
+    end
+    return true
+  end
+end
+
+# Factory used from the DSL below
+def lava_lamp(engine, colors)
+  return lava_lamp_anim(engine, colors)
+end
+"""
+extern function lava_lamp
+
+animation lava = lava_lamp(dinner_lava)
+run lava
